@@ -41,7 +41,7 @@ class Connection extends \CMSMS\Database\Connection
     protected $_in_smart_transaction = 0;
     protected $_transaction_status = true;
 
-    public function DbType()
+    public function dbType()
     {
         return 'mysqli';
     }
