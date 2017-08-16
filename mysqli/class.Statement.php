@@ -1,222 +1,287 @@
 <?php
+/*
+-------------------------------------------------------------------------
+Module: \CMSMS\Database\mysqli\Statement (C) 2017 Robert Campbell
+         <calguy1000@cmsmadesimple.org>
+A class to represent a prepared SQL statement
+-------------------------------------------------------------------------
+CMS Made Simple (C) 2004-2017 Ted Kulp <wishy@cmsmadesimple.org>
+Visit our homepage at: http:www.cmsmadesimple.org
+-------------------------------------------------------------------------
+BEGIN_LICENSE
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+However, as a special exception to the GPL, this software is distributed
+as an addon module to CMS Made Simple.  You may not use this software
+in any Non GPL version of CMS Made simple, or in any version of CMS
+Made simple that does not indicate clearly and obviously in its admin
+section that the site was built with CMS Made simple.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+Or read it online: http:www.gnu.org/licenses/licenses.html#GPL
+END_LICENSE
+-------------------------------------------------------------------------
+*/
 
 namespace CMSMS\Database\mysqli;
 
-class Statement extends \CMSMS\Database\Statement
+/**
+ * A class defining a prepared database statement.
+ *
+ * @author Robert Campbell
+ * @copyright Copyright (C) 2017, Robert Campbell <calguy1000@cmsmadesimple.org>
+ *
+ * @since 2.2
+ *
+ * @property-read Connection $db The database connection
+ * @property-read string $sql The SQL query
+ */
+class Statement
 {
-    private $_data;
+    /**
+     * @ignore
+     */
+    protected $_conn; // Connection object
+    /**
+     * @ignore
+     */
+    protected $_sql;
+    /**
+     * @ignore
+     */
+    protected $_stmt; // mysqli_stmt object
+    /**
+     * @ignore
+     */
+    protected $_prep = false;
+    protected $_bound = false;
+    /**
+     * @ignore
+     */
+    protected $_native = ''; //for PHP 5.4+, the MySQL native driver is a php.net compile-time default
 
-    // meta...
-    private $_bind;
-    private $_bound;
-    private $_types;
-    private $_stmt; // the statement object.
-    private $_meta; // after first execute
-    private $_num_rows; // after first execute
-    private $_row; // updates after each execute for queries with a resultset
-    private $_pos; // updates after each execute for queries with a resultset
-
+    /**
+     * Constructor.
+     *
+     * @param Connection      $conn The database connection
+     * @param optional string $sql  The SQL query, default null
+     */
     public function __construct(Connection $conn, $sql = null)
     {
-        // this is just for type checking.
-        parent::__construct($conn, $sql);
+        $this->_conn = $conn;
+        $this->_sql = $sql;
     }
 
     public function __destruct()
     {
         if ($this->_stmt) {
-            $this->_stmt->free_result();
-            $this->_stmt->close();
+            if ($this->_bound) {
+                $this->_stmt->free_result();
+            }
+            if ($this->_prep) {
+                $this->_stmt->close();
+            }
         }
     }
 
-    protected function get_type_char($var)
+    /**
+     * @ignore
+     */
+    public function __get($key)
     {
-        $t = gettype($var);
-        switch ($t) {
-        case 'double':
-            return 'd';
-        case 'boolean':
-        case 'integer':
-            return 'i';
-        case 'string':
-        default:
-            return 's';
+        switch ($key) {
+         case 'db':
+         case 'conn':
+            return $this->_conn;
+         case 'sql':
+            return $this->_sql;
         }
     }
 
-    protected function set_bound_data($data)
+    /**
+     * @internal
+     */
+    protected function isNative()
     {
-        $this->_data = $data;
-        reset($this->_data);
+        if ($this->_native === '') {
+            $this->_native = function_exists('mysqli_fetch_all');
+        }
+
+        return $this->_native;
     }
 
-    protected function bind_params()
+    /**
+     * Prepare the query.
+     *
+     * @param optional string $sql parameterized SQL command default null
+     */
+    public function prepare($sql = null)
+    {
+        $mysql = $this->_conn->get_inner_mysql();
+        if (!$mysql || !$this->_conn->isConnected()) {
+            //$this->_conn->OnError(parent::ERROR_X, -1, 'message');
+            throw new \Exception('Attempt to create prepared statement when database is not connected');
+        }
+        if (!($sql || $this->_sql)) {
+            //$this->_conn->OnError(parent::ERROR_X, -1, 'message');
+            throw new \Exception('No SQL to prepare');
+        }
+        if (!$sql) {
+            $sql = $this->_sql;
+        } else {
+            $this->_sql = $sql;
+        }
+        $this->_stmt = $mysql->stmt_init();
+        if ($this->_stmt->prepare((string) $sql)) {
+            $this->_prep = true;
+        } else {
+            $this->_prep = false;
+            //$this->_conn->OnError(parent::ERROR_X, -1, 'message');
+            throw new \Exception('Failed to create prepared statement');
+        }
+    }
+
+    /**
+     * Bind data (suppied as argument(s) here) to the sql statement.
+     */
+    public function bind()
     {
         if (!$this->_stmt) {
-            $this->prepare($this->sql);
+            if ($this->_sql) {
+                try {
+                    $this->prepare($this->_sql);
+                } catch (\Exception $e) {
+                    throw $e;
+                }
+            } else {
+                //$this->_conn->OnError(parent::ERROR_X, -1, 'message');
+                throw new \Exception('No SQL to bind to');
+            }
         }
 
-        // get the type string
-        $this->types = '';
-        $keys = null;
         $args = func_get_args();
-        if (count($args) == 1 && is_array($args) && is_array($args[0])) {
-            // we expect that the data is an associtive array
-            $row = $args[0];
-            foreach ($row as $key => $val) {
-                $this->_types .= $this->get_type_char($val);
-            }
-            $this->_bind = array_values($row);
-            $keys = array_keys($row);
-        } else {
-            // function called with numerous parameters... get their types
-            $keys = array_keys($args);
-            foreach ($args as $val) {
-                $this->_types .= $this->get_type_char($val);
-            }
-            $this->_bind = array_values($args);
-        }
-
-        $this->_bound = array();
-        $this->_bound[] = & $this->_types;
-        for ($i = 0; $i < count($keys); $i++) {
-            $this->_bound[] = & $this->_bind[$i];
-        }
-        call_user_func_array(array($this->_stmt, 'bind_param'), $this->_bound);
-    }
-
-    protected function prepare($sql)
-    {
-        $conn = $this->db->get_inner_mysql();
-        if (!$conn || !$this->db->IsConnected()) {
-            throw new \LogicException('Attempt to create prepared statement when database is not connected');
-        }
-        $this->_stmt = $conn->prepare((string) $sql);
-        $this->_row = null;
-        $this->_pos = 0;
-    }
-
-    public function Bind(array $data)
-    {
-        parent::Bind($data);
-        $first = $data[0];
-        $this->bind_params($first);
-    }
-
-    public function EOF()
-    {
-        if ($this->_meta) {
-            return ($this->_pos >= $this->_num_rows);
-        }
-        if (!$this->_data) {
-            return TRUE;
-        }
-        return (current($this->_data) === FALSE);
-    }
-
-    public function MoveFirst()
-    {
-        if ($this->_meta) {
-            $this->_stmt->data_seek(0);
-        }
-        if ($this->_data) {
-            reset($this->_data);
-        }
-    }
-
-    public function MoveNext()
-    {
-        if ($this->_meta) {
-            $this->_pos = $this->_pos + 1;
-        }
-        if ($this->_data) {
-            next($this->_data);
-        }
-    }
-
-    public function Fields($col = null)
-    {
-        $row = null;
-        if ($this->_stmt) {
-            $this->_stmt->fetch();
-            $row = $this->_row;
-        }
-        if (!$row && $this->_data) {
-            $row = current($this->_data);
-        }
-        if (!$row) {
-            return;
-        } // nothing
-
-        if ($col) {
-            if (isset($row[$col])) {
-                return $row[$col];
-            }
-        } else {
-            return $row;
-        }
-    }
-
-    public function Execute()
-    {
-        if (!$this->_stmt) {
-            $this->prepare($this->_sql);
-        }
-        $args = func_get_args();
-        if (count($args) == 1 && is_array($args) && is_array($args[0])) {
+        if (is_array($args) && count($args) == 1 && is_array($args[0])) {
             $args = $args[0];
         }
+        $types = '';
+        $bound = [''];
+        foreach ($args as $k => &$val) {
+            switch (gettype($val)) {
+             case 'double': //i.e. float
+//          $val = strtr($val, ',', '.');
+                $types .= 'd';
+                break;
+             case 'boolean':
+                $args[$k] = $val ? 1 : 0;
+             case 'integer':
+                $types .= 'i';
+                break;
+//             case 'string':
+//TODO handle blobs for data > max_allowed_packet, send them using ::send_long_data()
+// to get the max_allowed_packet
+//$mysql = $this->_conn->get_inner_mysql();
+//$maxp = $mysql->query('SELECT @@global.max_allowed_packet')->fetch_array();
+//             case 'array':
+//             case 'object':
+//             case 'resource':
+//                $val = serialize($val);
+//                $types .= 's';
+//                break;
+//             case 'NULL':
+//             case 'unknown type':
+             default:
+                $types .= 's';
+                break;
+            }
+            $bound[] = &$args[$k];
+        }
+        unset($val);
+        $bound[0] = $types;
 
-        /* if we have param count, find some arguments... either via the execute method... or via bound params */
+        if ($this->_bound) {
+            $this->_stmt->free_result();
+        }
+
+        if (call_user_func_array([$this->_stmt, 'bind_param'], $bound)) {
+            $this->_bound = true;
+
+            return;
+        }
+        $this->_bound = false;
+        //$this->_conn->OnError(parent::ERROR_X, -1, 'message');
+        throw new \Exception('Failed to bind paramers to prepared statement');
+    }
+
+    /**
+     * Execute the query, using supplied arguments (if any) as bound values.
+     *
+     * @return object: ResultSet or EmptyResultSet or PrepResultSet
+     */
+    public function execute()
+    {
+        if (!$this->_stmt) {
+            if ($this->_sql) {
+                try {
+                    $this->prepare($this->_sql);
+                } catch (\Exception $e) {
+                    throw $e;
+                }
+            } else {
+                //$this->_conn->OnError(parent::ERROR_X, -1, 'message');
+                throw new \BadFunctionCallException('No SQL to prepare');
+            }
+        }
+
         $pc = $this->_stmt->param_count;
-        $fc = $this->_stmt->field_count;
+        $args = func_get_args();
         if ($args) {
-            $this->_data = $args;
-            $this->bind_params($args);
+            if (is_array($args) && count($args) == 1 && is_array($args[0])) {
+                $args = $args[0];
+            }
+            if ($pc != count($args)) {
+                //$this->_conn->OnError(parent::ERROR_X, -1, 'message');
+                throw new \BadFunctionCallException('Incorrect number of bound parameters - should be '.$pc);
+            }
+            try {
+                $this->bind($args);
+            } catch (\Exception $e) {
+                throw $e;
+            }
+        } elseif ($pc > 0 && !$this->_bound) {
+            //$this->_conn->OnError(parent::ERROR_X, -1, 'message');
+            throw new \BadFunctionCallException('No bound parameters, and no arguments passed');
         }
-        if ($pc) {
-            // we are expecting paramers
-            if (!count($args)) {
-                // get the arguments via the bound data current row.
-                if (!$this->_bind) {
-                    throw new \LogicException('No bound parameters, and no arguments passed');
+
+        if (!$this->_stmt->execute()) {
+            //$this->_conn->OnError(parent::ERROR_X, -1, 'message');
+            throw new \Exception('ERROR: '.$this->_stmt->error);
+        }
+
+        if ($this->_stmt->field_count > 0) {
+            if ($this->isNative()) {
+                $rs = $this->_stmt->get_result(); //mysqli_result or false
+                if ($rs) {
+                    return new ResultSet($this->conn, $rs);
+                } elseif ($this->_stmt->errno > 0) {
+                    //$this->_conn->OnError(parent::ERROR_X, -1, 'message');
+                    throw new \Exception('ERROR: '.$this->_stmt->error);
+                } else { //should never happen
+                    return new \CMSMS\Database\EmptyResultSet();
                 }
-                if (count($this->_bind) != $pc) {
-                    throw new \LogicException('Incorrect number of bound parameters.  Expecting '.$this->_stmt->field_count);
-                }
-                $args = $this->Fields();
+            } else {
+                return new PrepResultSet($this->conn, $this->_stmt);
             }
-        }
-        if ($pc != count($args)) {
-            throw new \LogicException('Incorrect number of arguments. Expecting '.$pc);
-        }
-
-        if ($args) {
-            // update bound values
-            $keys = array_keys($args);
-            for ($i = 0; $i < count($this->_bind); $i++) {
-                $this->_bind[$i] = $args[$keys[$i]];
-            }
-        }
-
-        $res = $this->_stmt->execute();
-        if (!$res) {
-            die('ERROR: '.$this->_stmt->error."\n");
-        }
-
-        $this->_stmt->store_result();
-
-        $meta = $this->_stmt->result_metadata();
-        if (!$this->_meta && $meta) {
-            $this->_num_rows = $this->_stmt->num_rows;
-            $this->_meta = $meta;
-            $this->_row = array();
-            while ($field = $this->_meta->fetch_field()) {
-                $this->_row[$field->name] = null;
-                $params[] = & $this->_row[$field->name];
-            }
-            call_user_func_array(array($this->_stmt, 'bind_result'), $params);
+        } else {
+            return new \CMSMS\Database\EmptyResultSet();
         }
     }
 }

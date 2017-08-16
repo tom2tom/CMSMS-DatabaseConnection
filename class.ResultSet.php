@@ -1,205 +1,171 @@
 <?php
-#BEGIN_LICENSE
-#-------------------------------------------------------------------------
-# Module: \CMSMS\Database\ConnectionSpec (c) 2015 by Robert Campbell
-#		 (calguy1000@cmsmadesimple.org)
-#  A class to define how to connect to a database.
-#
-#-------------------------------------------------------------------------
-# CMS - CMS Made Simple is (c) 2005 by Ted Kulp (wishy@cmsmadesimple.org)
-# Visit our homepage at: http://www.cmsmadesimple.org
-#
-#-------------------------------------------------------------------------
-#
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2 of the License, or
-# (at your option) any later version.
-#
-# However, as a special exception to the GPL, this software is distributed
-# as an addon module to CMS Made Simple.  You may not use this software
-# in any Non GPL version of CMS Made simple, or in any version of CMS
-# Made simple that does not indicate clearly and obviously in its admin
-# section that the site was built with CMS Made simple.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software
-# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
-# Or read it online: http://www.gnu.org/licenses/licenses.html#GPL
-#
-#-------------------------------------------------------------------------
-#END_LICENSE
+/*
+-------------------------------------------------------------------------
+Module: \CMSMS\Database\ConnectionSpec (C) 2017 Robert Campbell
+        <calguy1000@cmsmadesimple.org>
+A class to define how to connect to a database.
+-------------------------------------------------------------------------
+CMS Made Simple (C) 2004-2017 Ted Kulp <wishy@cmsmadesimple.org>
+Visit our homepage at: http://www.cmsmadesimple.org
+-------------------------------------------------------------------------
+BEGIN_LICENSE
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
 
-/**
- * This file defines the base ResultSet class.
- *
- * @package CMS
- */
+However, as a special exception to the GPL, this software is distributed
+as an addon module to CMS Made Simple.  You may not use this software
+in any Non GPL version of CMS Made simple, or in any version of CMS
+Made simple that does not indicate clearly and obviously in its admin
+section that the site was built with CMS Made simple.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+Or read it online: http://www.gnu.org/licenses/licenses.html#GPL
+END_LICENSE
+-------------------------------------------------------------------------
+*/
 
 namespace CMSMS\Database;
 
 /**
- * A class defining a resultset and how to interact with results from a database query.
+ * A class defining a ResultSet and how to interact with results from a database query.
  *
- * @package CMS
  * @author Robert Campbell
- * @copyright Copyright (c) 2015, Robert Campbell <calguy1000@cmsmadesimple.org>
+ * @copyright Copyright (C) 2017, Robert Campbell <calguy1000@cmsmadesimple.org>
+ *
  * @since 2.2
- * @property-read bool $EOF Test if we are at the end of the current resultset.
- * @property-read array $fields Return the current row of the resultset.
+ *
+ * @property-read bool $EOF Test if we are at the end of the current ResultSet
+ * @property-read array $fields Return the current row of the ResultSet
  */
-abstract class Resultset
+abstract class ResultSet
 {
+    /**
+     * @ignore
+     */
+    protected $_native = ''; //for PHP 5.4+, the MySQL native driver is a php.net compile-time default
+
     /**
      * @ignore
      */
     public function __destruct()
     {
-        $this->Close();
+        $this->close();
     }
 
     /**
-     * Move to the first row in a resultset.
+     * Move to the first row in the ResultSet data.
      */
-    abstract public function MoveFirst();
+    abstract public function moveFirst();
 
     /**
-     * Move to the next row of a resultset.
+     * Move to the next row of the ResultSet data.
      */
-    abstract public function MoveNext();
+    abstract public function moveNext();
 
     /**
-     * Move to a specified index of the resultset.
+     * Move to a specified index in the ResultSet data.
      *
      * @param int $idx
      */
-    abstract protected function Move($idx);
+    abstract protected function move($idx);
 
     /**
-     * Get all remaining results in this resultset as an array of records.
+     * Get all data in the ResultSet as an array.
      *
      * @return array
      */
-    public function GetArray()
-    {
-        $results = array();
-        while (!$this->EOF()) {
-            $results[] = $this->fields();
-            $this->MoveNext();
-        }
-        return $results;
-    }
+    abstract public function getArray();
 
     /**
-     * An alias for the GetArray method.
+     * An alias for the getArray method.
      *
-     * @see GetArray()
+     * @see getArray()
+     *
      * @return array
+     *
      * @deprecated
      */
-    public function GetRows()
+    public function getRows()
     {
-        return $this->GetArray();
+        return $this->getArray();
     }
 
     /**
-     * An alias for the GetArray method.
-     * @see GetArray()
+     * An alias for the getArray method.
+     *
+     * @see getArray()
+     *
      * @return array
+     *
      * @deprecated
      */
-    public function GetAll()
+    public function getAll()
     {
-        return $this->GetArray();
+        return $this->getArray();
     }
 
     /**
-     * Get an associative array from a resultset.
+     * Get all data in the ResultSet as an array with first-selected values
+     *  as keys.
      *
-     * If only two columns are returned in the resultset, the keys of the returned associative array
-     * will be the value of the first column, and the value of each key will be the value from the second column.
-     *
-     * If more than 2 columns are returned, then the key of the returned associative array will be the
-     * value from the first column, and the value of each key will be an associative array of the remaining columns.
-     * This is known as array behavior.
-     *
-     * @deprecated
-     * @param boolean force_array Force array behavior, even if there are only two columns in the resulting SQL.
-     * @param boolean first2cols The opposite of force_array.  Only output the data from the first 2 columns as an associative array.
      * @return array
      */
-    public function GetAssoc($force_array = false, $first2cols = false)
-    {
-        $data = null;
-        $first_row = $this->Fields();
-        if (count($first_row) < 2) {
-            return $data;
-        }
-
-        $data = [];
-        $keys = array_keys($first_row);
-        $numeric_index = isset($row[0]);
-        if (!$first2cols && (count($keys) > 2 || $force_array)) {
-            // output key is first column
-            // other columns as assoc
-            $first_key = $keys[0];
-            while (!$this->EOF()) {
-                $row = $this->Fields();
-                $data[trim($row[$first_key])] = array_slice($row, 1);
-                $this->MoveNext();
-            }
-        } else {
-            // only 2 columns... output a single associative
-            while (!$this->EOF()) {
-                $row = $this->Fields();
-                $data[trim($row[$keys[0]])] = $row[$keys[1]];
-                $this->MoveNext();
-            }
-        }
-        return $data;
-    }
+    abstract public function getAssoc($force_array = false, $first2cols = false);
 
     /**
-     * Test if we are at the end of a resultset, and there are no further matches.
+     * Test if we are at the end of the ResultSet data, and there are no further matches.
      *
      * @return bool
      */
     abstract public function EOF();
 
     /**
-     * Close the current resultset.
+     * Close the current ResultSet.
      */
-    abstract public function Close();
+    abstract public function close();
 
     /**
-     * Return the number of rows in the current resultset.
+     * Get the current position in the ResultSet data.
+     *
+     * @return int, or false if no current position
+     */
+    abstract public function currentRow();
+
+    /**
+     * Return the number of rows in the current ResultSet.
      *
      * @return int
      */
-    abstract public function RecordCount();
+    abstract public function recordCount();
 
     /**
-     * Alias for the RecordCount() method.
+     * Alias for the recordCount() method.
      *
-     * @see RecordCount();
+     * @see recordCount();
+     *
      * @return int
      */
     public function NumRows()
     {
-        return $this->RecordCount();
+        return $this->recordCount();
     }
 
     /**
-     * Return the fields of the current resultset, or a single field of it.
+     * Return all the fields, or a single field, of the current row of the ResultSet.
      *
-     * @param string $field An optional field name, if not specified, the entire row will be returned.
-     * @return mixed|array Either a single value, or an array
+     * @param string $field An optional field name, if not specified, the entire row will be returned
+     *
+     * @return mixed|array Either a single value, or an array, or null
      */
-    abstract public function Fields($field = null);
+    abstract public function fields($field = null);
 
     /**
      * Fetch the current row, and move to the next row.
@@ -208,12 +174,14 @@ abstract class Resultset
      */
     public function FetchRow()
     {
-        if ($this->EOF()) {
-            return false;
-        }
         $out = $this->fields();
-        $this->MoveNext();
-        return $out;
+        if ($out !== null) {
+            $this->moveNext();
+
+            return $out;
+        }
+
+        return [];
     }
 
     /**
@@ -222,15 +190,31 @@ abstract class Resultset
     abstract protected function fetch_row();
 
     /**
+     * @internal
+     */
+    protected function isNative()
+    {
+        if ($this->_native === '') {
+            $this->_native = function_exists('mysqli_fetch_all');
+        }
+
+        return $this->_native;
+    }
+
+    /**
      * @ignore
      */
     public function __get($key)
     {
-        if ($key == 'EOF') {
+        switch ($key) {
+         case 'EOF':
             return $this->EOF();
-        }
-        if ($key == 'fields') {
-            return $this->Fields();
+         case 'count':
+            return $this->recordCount();
+         case 'fields':
+            return $this->fields();
+         default:
+            return null;
         }
     }
 }

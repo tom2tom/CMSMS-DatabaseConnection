@@ -1,9 +1,9 @@
 <?php
 /*
 -------------------------------------------------------------------------
-Module: \CMSMS\Database\mysqli\ResultSet (C) 2017 Robert Campbell
+Module: \CMSMS\Database\mysqli\PrepResultSet (C) 2017 Robert Campbell
          <calguy1000@cmsmadesimple.org>
-A class to represent a query result
+A class to represent a prepared-query result
 -------------------------------------------------------------------------
 CMS Made Simple (C) 2004-2017 Ted Kulp <wishy@cmsmadesimple.org>
 Visit our homepage at: http:www.cmsmadesimple.org
@@ -34,42 +34,49 @@ END_LICENSE
 
 namespace CMSMS\Database\mysqli;
 
-class ResultSet extends \CMSMS\Database\ResultSet
+class PrepResultSet extends \CMSMS\Database\ResultSet
 {
     private $_mysql; //mysqli object
-    private $_result = null; //mysqli_result object (for query which returns data), or boolean
+    private $_stmt; // mysqli_stmt object
     private $_fields = [];
     private $_nrows = 0;
-    private $_pos = -1;
+    private $_pos;
 
     /**
-     * @param $conn Connection object
-     * @param $result mysqli_result object (for queries which return data), or boolean
+     * @param conn Connection object
+     * @param $statmt mysqli_stmt object
      */
-    public function __construct(Connection $conn, $result)
+    public function __construct($conn, \mysqli_stmt $statmt)
     {
         $this->_mysql = $conn->get_inner_mysql();
-        if ($result instanceof \mysqli_result) {
-            $this->_nrows = $result->num_rows;
-            $this->_fields = $result->fetch_array(MYSQLI_ASSOC);
-            if ($this->_fields) {
-                $this->_pos = 0;
-            }
+        $statmt->store_result(); //buffer the complete result set
+        $this->_nrows = $statmt->num_fields;
+        //setup for row-wise data fetching
+        $params = [];
+        $rs = $statmt->result_metadata();
+        while ($field = $rs->fetch_field()) {
+            $nm = $field->name;
+            $this->_fields[$nm] = null;
+            $params[] = &$this->_fields[$nm];
         }
-        $this->_result = $result;
+        if ($params) {
+            call_user_func_array([$statmt, 'bind_result'], $params);
+        }
+        $statmt->fetch();
+        $this->_stmt = $statmt;
+        $this->_pos = ($this->_fields) ? 0 : -1;
     }
 
     public function __destruct()
     {
-        if (is_object($this->_result)) {
-            $this->_result->free();
-        }
+        $this->_stmt->free_result();
+        $this->_stmt->close();
     }
 
     public function close()
     {
         $this->__destruct();
-        $this->_result = null;
+        $this->_stmt = null;
         $this->_fields = [];
         $this->_nrows = 0;
         $this->_pos = -1;
@@ -77,7 +84,7 @@ class ResultSet extends \CMSMS\Database\ResultSet
 
     public function fields($key = null)
     {
-        if ($this->_fields && !$this->EOF()) {
+        if ($this->_fields) {
             if (empty($key)) {
                 return $this->_fields;
             }
@@ -115,12 +122,11 @@ class ResultSet extends \CMSMS\Database\ResultSet
             return true;
         }
         if ($idx >= 0 && $idx < $this->_nrows) {
-            if ($this->_result->data_seek($idx)) {
-                $this->_pos = $idx;
-                $this->fetch_row();
+            $this->_stmt->data_seek($idx);
+            $this->_pos = $idx;
+            $this->fetch_row();
 
-                return true;
-            }
+            return true;
         }
         $this->_pos = -1;
         $this->_fields = [];
@@ -148,53 +154,29 @@ class ResultSet extends \CMSMS\Database\ResultSet
 
     public function getArray()
     {
-        if ($this->isNative()) {
-            $this->_result->data_seek(0);
-
-            return $this->_result->fetch_all(MYSQLI_ASSOC);
-        } else {
-            $results = [];
-            $this->moveFirst();
-            while (!$this->EOF()) {
-                $results[] = $this->_fields;
-                $this->moveNext();
-            }
-
-            return $results;
+        $results = [];
+        $this->moveFirst();
+        while (!$this->EOF()) {
+            $results[] = $this->_fields;
+            $this->moveNext();
         }
+
+        return $results;
     }
 
     public function getAssoc($force_array = false, $first2cols = false)
     {
         $results = [];
-        $c = $this->_result->field_count;
+        $c = $this->_stmt->field_count;
         if ($c > 1 && $this->_nrows) {
             $first = key($this->_fields);
             $short = ($c == 2 || $first2cols) && !$force_array;
-            if ($this->isNative()) {
-                $this->_result->data_seek(0);
-                $data = $this->_result->fetch_all(MYSQLI_ASSOC);
-                $n = $this->_nrows;
-                if ($short) {
-                    for ($key = 0; $key < $n; ++$key) {
-                        $row = $data[$key];
-                        $results[trim($row[$first])] = next($row);
-                        unset($data[$key]); //preserve memory footprint
-                    }
-                } else {
-                    for ($key = 0; $key < $n; ++$key) {
-                        $val = $data[$key][$first];
-                        unset($data[$key][$first]);
-                        $results[trim($val)] = $data[$key]; //not duplicated
-                    }
-                }
-            } else {
-                $this->moveFirst();
-                while (!$this->EOF()) {
-                    $row = $this->_fields;
-                    $results[trim($row[$first])] = ($short) ? next($row) : array_slice($row, 1);
-                    $this->moveNext();
-                }
+
+            $this->moveFirst();
+            while (!$this->EOF()) {
+                $row = $this->_fields;
+                $results[trim($row[$first])] = ($short) ? next($row) : array_slice($row, 1);
+                $this->moveNext();
             }
         }
 
@@ -205,24 +187,11 @@ class ResultSet extends \CMSMS\Database\ResultSet
     {
         $results = [];
         if ($this->_nrows) {
-            if ($this->isNative()) {
-                $this->_result->data_seek(0);
-                $data = $this->_result->fetch_all(MYSQLI_NUM);
-                if (!$trim && function_exists('array_column')) {
-                    return array_column($data, 0);
-                }
-                $n = $this->_nrows;
-                for ($key = 0; $key < $n; ++$key) {
-                    $results[] = ($trim) ? trim($data[$key][0]) : $data[$key][0];
-                    unset($data[$key]); //preserve memory footprint
-                }
-            } else {
-                $key = key($this->_fields);
-                $this->moveFirst();
-                while (!$this->EOF()) {
-                    $results[] = ($trim) ? trim($this->_fields[$key]) : $this->_fields[$key];
-                    $this->moveNext();
-                }
+            $key = key($this->_fields);
+            $this->moveFirst();
+            while (!$this->EOF()) {
+                $results[] = ($trim) ? trim($this->_fields[$key]) : $this->_fields[$key];
+                $this->moveNext();
             }
         }
 
@@ -232,7 +201,7 @@ class ResultSet extends \CMSMS\Database\ResultSet
     protected function fetch_row()
     {
         if (!$this->EOF()) {
-            $this->_fields = $this->_result->fetch_array(MYSQLI_ASSOC);
+            $this->_stmt->fetch();
         }
     }
 }

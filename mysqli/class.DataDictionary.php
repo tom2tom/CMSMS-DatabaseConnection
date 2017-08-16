@@ -1,4 +1,36 @@
 <?php
+/*
+-------------------------------------------------------------------------
+Module: \CMSMS\Database\mysqli\DataDictionary (C) 2017 Robert Campbell
+         <calguy1000@cmsmadesimple.org>
+A class to represent a data dictionary
+-------------------------------------------------------------------------
+CMS Made Simple (C) 2004-2017 Ted Kulp <wishy@cmsmadesimple.org>
+Visit our homepage at: http:www.cmsmadesimple.org
+-------------------------------------------------------------------------
+BEGIN_LICENSE
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+However, as a special exception to the GPL, this software is distributed
+as an addon module to CMS Made Simple.  You may not use this software
+in any Non GPL version of CMS Made simple, or in any version of CMS
+Made simple that does not indicate clearly and obviously in its admin
+section that the site was built with CMS Made simple.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+Or read it online: http:www.gnu.org/licenses/licenses.html#GPL
+END_LICENSE
+-------------------------------------------------------------------------
+*/
 
 namespace CMSMS\Database\mysqli;
 
@@ -42,8 +74,7 @@ class DataDictionary extends \CMSMS\Database\DataDictionary
 
         case 'F': return 'DOUBLE';
         case 'N': return 'NUMERIC';
-        default:
-            return $meta;
+        default: return $meta;
         }
     }
 
@@ -98,6 +129,7 @@ class DataDictionary extends \CMSMS\Database\DataDictionary
             if (!empty($fieldobj->primary_key)) {
                 return 'R';
             }
+
             return 'I';
 
         default:
@@ -112,7 +144,7 @@ class DataDictionary extends \CMSMS\Database\DataDictionary
                 'VARYING' => 'C',
                 'BPCHAR' => 'C',
                 'CHARACTER' => 'C',
-                ##
+
                 'LONGCHAR' => 'X',
                 'TEXT' => 'X',
                 'NTEXT' => 'X',
@@ -121,34 +153,34 @@ class DataDictionary extends \CMSMS\Database\DataDictionary
                 'CLOB' => 'X',
                 'NCLOB' => 'X',
                 'LVARCHAR' => 'X',
-                ##
+
                 'BLOB' => 'B',
                 'IMAGE' => 'B',
                 'BINARY' => 'B',
                 'VARBINARY' => 'B',
                 'LONGBINARY' => 'B',
                 'B' => 'B',
-                ##
+
                 'YEAR' => 'D', // mysql
                 'DATE' => 'D',
                 'D' => 'D',
-                ##
+
                 'TIME' => 'T',
                 'TIMESTAMP' => 'T',
                 'DATETIME' => 'T',
                 'TIMESTAMPTZ' => 'T',
                 'T' => 'T',
-                ##
+
                 'BOOL' => 'L',
                 'BOOLEAN' => 'L',
                 'BIT' => 'L',
                 'L' => 'L',
-                ##
+
                 'COUNTER' => 'R',
                 'R' => 'R',
                 'SERIAL' => 'R', // ifx
                 'INT IDENTITY' => 'R',
-                ##
+
                 'INT' => 'I',
                 'INT2' => 'I',
                 'INT4' => 'I',
@@ -159,7 +191,7 @@ class DataDictionary extends \CMSMS\Database\DataDictionary
                 'TINYINT' => 'I',
                 'SMALLINT' => 'I',
                 'I' => 'I',
-                ##
+
                 'LONG' => 'N', // interbase is numeric, oci8 is blob
                 'BIGINT' => 'N', // this is bigger than PHP 32-bit integers
                 'DECIMAL' => 'N',
@@ -173,34 +205,11 @@ class DataDictionary extends \CMSMS\Database\DataDictionary
                 'NUM' => 'N',
                 'NUMERIC' => 'N',
                 'MONEY' => 'N',
-
-                ## informix 9.2
-                'SQLINT' => 'I',
-                'SQLSERIAL' => 'I',
-                'SQLSMINT' => 'I',
-                'SQLSMFLOAT' => 'N',
-                'SQLFLOAT' => 'N',
-                'SQLMONEY' => 'N',
-                'SQLDECIMAL' => 'N',
-                'SQLDATE' => 'D',
-                'SQLVCHAR' => 'C',
-                'SQLCHAR' => 'C',
-                'SQLDTIME' => 'T',
-                'SQLINTERVAL' => 'N',
-                'SQLBYTES' => 'B',
-                'SQLTEXT' => 'X',
-                ## informix 10
-                "SQLINT8" => 'I8',
-                "SQLSERIAL8" => 'I8',
-                "SQLNCHAR" => 'C',
-                "SQLNVCHAR" => 'C',
-                "SQLLVARCHAR" => 'X',
-                "SQLBOOL" => 'L'
                 );
 
-            $tmap = false;
             $t = strtoupper($t);
             $tmap = (isset($typeMap[$t])) ? $typeMap[$t] : 'N';
+
             return $tmap;
         }
     }
@@ -208,7 +217,7 @@ class DataDictionary extends \CMSMS\Database\DataDictionary
     public function MetaTables()
     {
         $sql = 'SHOW TABLES';
-        $list = $this->connection->GetCol($sql);
+        $list = $this->connection->getCol($sql);
         if (count($list)) {
             return $list;
         }
@@ -222,12 +231,13 @@ class DataDictionary extends \CMSMS\Database\DataDictionary
         }
 
         $sql = 'SHOW COLUMNS FROM ?';
-        $rs = $this->connection->GetArray($sql, $table);
+        $rs = $this->connection->getArray($sql, $table);
         if (is_array($rs) && count($rs)) {
             $out = array();
             foreach ($rs as $row) {
                 $out[] = $row['Field'];
             }
+
             return $out;
         }
     }
@@ -250,10 +260,11 @@ class DataDictionary extends \CMSMS\Database\DataDictionary
         if ($fconstraint) {
             $suffix .= ' '.$fconstraint;
         }
+
         return $suffix;
     }
 
-    function _ProcessOptions($opts)
+    public function _ProcessOptions($opts)
     {
         // fixes for old TYPE= stuff in tabopts.
         if (is_array($opts) && count($opts)) {
@@ -263,10 +274,11 @@ class DataDictionary extends \CMSMS\Database\DataDictionary
                 }
             }
         }
+
         return $opts;
     }
 
-    function _IndexSQL($idxname, $tabname, $flds, $idxoptions)
+    public function _IndexSQL($idxname, $tabname, $flds, $idxoptions)
     {
         $sql = array();
 
@@ -282,7 +294,7 @@ class DataDictionary extends \CMSMS\Database\DataDictionary
             }
         }
 
-        if (empty ($flds)) {
+        if (empty($flds)) {
             return $sql;
         }
 
@@ -299,12 +311,12 @@ class DataDictionary extends \CMSMS\Database\DataDictionary
         }
 
         if ($this->alterTableAddIndex) {
-            $s = "ALTER TABLE $tabname ADD $unique INDEX $idxname ";
+            $s = "ALTER TABLE $tabname ADD{$unique} INDEX $idxname";
         } else {
-            $s = 'CREATE' . $unique . ' INDEX ' . $idxname . ' ON ' . $tabname;
+            $s = "CREATE{$unique} INDEX $idxname ON $tabname";
         }
 
-        $s .= ' (' . $flds . ')';
+        $s .= ' ('.$flds.')';
 
         if (($opts = $this->get_dbtype_options($idxoptions))) {
             $s .= $opts;
@@ -315,39 +327,33 @@ class DataDictionary extends \CMSMS\Database\DataDictionary
         return $sql;
     }
 
-    function CreateTableSQL($tabname, $flds, $tableoptions = false)
+    public function CreateTableSQL($tabname, $flds, $tableoptions = false)
     {
         $str = 'ENGINE=MyISAM CHARACTER SET utf8 COLLATE utf8_general_ci';
         $dbtype = $this->_DBType();
 
         // clean up input tableoptions
         if (!$tableoptions) {
-            $tableoptions = [ $dbtype => $str ];
-        } else {
-            if (is_string($tableoptions)) {
-                $tableoptions = [ $dbtype => $tableoptions ];
-            } else {
-                if (is_array($tableoptions) && !isset($tableoptions[$dbtype]) && isset($tableoptions['mysql'])) {
-                    $tableoptions[$dbtype] = $tableoptions['mysql'];
-                } else {
-                    if (is_array($tableoptions) && !isset($tableoptions[$dbtype]) && isset($tableoptions['MYSQL'])) {
-                        $tableoptions[$dbtype] = $tableoptions['MYSQL'];
-                    }
-                }
-            }
+            $tableoptions = [$dbtype => $str];
+        } elseif (is_string($tableoptions)) {
+            $tableoptions = [$dbtype => $tableoptions];
+        } elseif (is_array($tableoptions) && !isset($tableoptions[$dbtype]) && isset($tableoptions['mysql'])) {
+            $tableoptions[$dbtype] = $tableoptions['mysql'];
+        } elseif (is_array($tableoptions) && !isset($tableoptions[$dbtype]) && isset($tableoptions['MYSQL'])) {
+            $tableoptions[$dbtype] = $tableoptions['MYSQL'];
         }
 
         foreach ($tableoptions as $key => &$val) {
-            if (strpos($val, 'TYPE=') !== FALSE) {
+            if (strpos($val, 'TYPE=') !== false) {
                 $val = str_replace('TYPE=', 'ENGINE=', $val);
             }
         }
-        if (isset($tableoptions[$dbtype]) && strpos($tableoptions[$dbtype], 'CHARACTER') === FALSE &&
-            strpos($tableoptions[$dbtype], 'COLLATE') === FALSE) {
+        if (isset($tableoptions[$dbtype]) && strpos($tableoptions[$dbtype], 'CHARACTER') === false &&
+            strpos($tableoptions[$dbtype], 'COLLATE') === false) {
             // if no character set and collate options specified, force UTF8
-            $tableoptions[$dbtype] .= " CHARACTER SET utf8 COLLATE utf8_general_ci";
+            $tableoptions[$dbtype] .= ' CHARACTER SET utf8 COLLATE utf8_general_ci';
         }
 
         return parent::CreateTableSQL($tabname, $flds, $tableoptions);
     }
-} // end of class
+}

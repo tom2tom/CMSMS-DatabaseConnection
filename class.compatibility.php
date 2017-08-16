@@ -1,51 +1,43 @@
 <?php
-#BEGIN_LICENSE
-#-------------------------------------------------------------------------
-# Module: CMSMS\Database\compatibility (c) 2015 by Robert Campbell
-#		 (calguy1000@cmsmadesimple.org)
-# A collection of compatibility tools for the database connectivity layer.
-#
-#-------------------------------------------------------------------------
-# CMS - CMS Made Simple is (c) 2005 by Ted Kulp (wishy@cmsmadesimple.org)
-# Visit our homepage at: http://www.cmsmadesimple.org
-#
-#-------------------------------------------------------------------------
-#
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2 of the License, or
-# (at your option) any later version.
-#
-# However, as a special exception to the GPL, this software is distributed
-# as an addon module to CMS Made Simple.  You may not use this software
-# in any Non GPL version of CMS Made simple, or in any version of CMS
-# Made simple that does not indicate clearly and obviously in its admin
-# section that the site was built with CMS Made simple.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software
-# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
-# Or read it online: http://www.gnu.org/licenses/licenses.html#GPL
-#
-#-------------------------------------------------------------------------
-#END_LICENSE
+/*
+-------------------------------------------------------------------------
+Module: CMSMS\Database\compatibility (C) 2017 Robert Campbell
+        <calguy1000@cmsmadesimple.org>
+A collection of compatibility tools for the database connectivity layer.
+-------------------------------------------------------------------------
+CMS Made Simple (C) 2004-2017 Ted Kulp <wishy@cmsmadesimple.org>
+Visit our homepage at: http://www.cmsmadesimple.org
+-------------------------------------------------------------------------
+BEGIN_LICENSE
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
 
-/**
- * This file contains some database connectivity tools.
- *
- * @package CMS
- */
+However, as a special exception to the GPL, this software is distributed
+as an addon module to CMS Made Simple.  You may not use this software
+in any Non GPL version of CMS Made simple, or in any version of CMS
+Made simple that does not indicate clearly and obviously in its admin
+section that the site was built with CMS Made simple.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+Or read it online: http://www.gnu.org/licenses/licenses.html#GPL
+END_LICENSE
+-------------------------------------------------------------------------
+*/
 
 namespace CMSMS\Database {
 
     /**
-     * A class for providing some compatibility functionality with older module code
+     * A class for providing some compatibility functionality with older module code.
      *
-     * @todo: move this class to a different function and rename.
+     * @todo: Move this class to a different function and rename.
      */
     final class compatibility
     {
@@ -60,12 +52,14 @@ namespace CMSMS\Database {
          * Initialize the database connection according to config settings.
          *
          * @internal
+         *
          * @param cms_config $config The config object
+         *
          * @return \CMSMS\Database\Connection
          */
         public static function init(\cms_config $config)
         {
-            $spec = new ConnectionSpec;
+            $spec = new ConnectionSpec();
             $spec->type = $config['dbms'];
             $spec->host = $config['db_hostname'];
             $spec->username = $config['db_username'];
@@ -83,8 +77,8 @@ namespace CMSMS\Database {
                 $dtz = new \DateTimeZone($config['timezone']);
                 $offset = timezone_offset_get($dtz, $dt);
                 $symbol = ($offset < 0) ? '-' : '+';
-                $hrs = abs((int)($offset / 3600));
-                $mins = abs((int)($offset % 3600));
+                $hrs = abs((int) ($offset / 3600));
+                $mins = abs((int) ($offset % 3600));
                 $tmp[] = sprintf("time_zone = '%s%d:%02d'", $symbol, $hrs, $mins);
             }
             if (count($tmp)) {
@@ -96,6 +90,7 @@ namespace CMSMS\Database {
             if ($spec->debug) {
                 $obj->SetDebugCallback('debug_buffer');
             }
+
             return $obj;
         }
 
@@ -110,19 +105,19 @@ namespace CMSMS\Database {
         }
 
         /**
-         * A static no-op function  that allows the autoloader to load this file
+         * A static no-op function  that allows the autoloader to load this file.
          */
         public static function noop()
         {
             // do nothing
         }
-    } // end of class
+    }
 } // end of namespace
 
 namespace {
     // root namespace stuff
 
-    /**
+    /*
      * A constant to assist with date and time flags in the data dictionary.
      *
      * @name CMS_ADODB_DT
@@ -130,13 +125,15 @@ namespace {
     define('CMS_ADODB_DT', 'DT'); // backwards compatibility.
 
     /**
-     * A method to create a new data dictionary object
+     * A method to create a new data dictionary object.
      *
-     * @param \CMSMS\Database\Connection $conn The existing database connection.
+     * @param \CMSMS\Database\Connection $conn The existing database connection
+     *
      * @return \CMSMS\Database\DataDictionary
+     *
      * @deprecated
      */
-    function &NewDataDictionary(\CMSMS\Database\Connection $conn)
+    function NewDataDictionary(\CMSMS\Database\Connection $conn)
     {
         // called by module installation routines.
         return $conn->NewDataDictionary();
@@ -147,10 +144,12 @@ namespace {
      *
      * @param string $dbms
      * @param string $flags
+     *
      * @return \CMSMS\Database\Connection
+     *
      * @deprecated
      */
-    function &ADONewConnection($dbms, $flags)
+    function ADONewConnection($dbms, $flags)
     {
         // now that our connection object is stateless... this is just a wrapper
         // for our global db instance.... but should not be called.
@@ -158,7 +157,7 @@ namespace {
     }
 
     /**
-     * A function forumerly used to load the adodb library.
+     * A function formerly used to load the adodb library.
      * This method currently has no functionality.
      *
      * @deprecated
@@ -186,11 +185,12 @@ namespace {
      *
      * @param string $dbtype
      * @param string $function_performed
-     * @param int	$error_number
+     * @param int    $error_number
      * @param string $error_message
      * @param string $host
      * @param string $database
      * @param mixed  $connection_obj
+     *
      * @deprecated
      */
     function adodb_error($dbtype, $function_performed, $error_number, $error_message,
@@ -198,6 +198,4 @@ namespace {
     {
         // does nothing.... remove me later.
     }
-
 }
-?>
