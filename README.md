@@ -10,6 +10,7 @@ The changes here are:
   * such queries may be re-used after further bind/execute
   * works only for DML and some DQL queries, others must be, or be migtated to, non-parameterized form (e.g. SHOW TABLES LIKE ? which was found just once)
   * string-field values are length-constrained (MySQL's max_allowed_packet setting applies)
+* for a parameterized query with a single parameter, the latter may be provided as a scalar instead of array (this is not ADOdb-compatible) 
 * several ADOdb methods reinstated
   * addQ
   * getMedian
