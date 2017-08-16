@@ -286,9 +286,9 @@ abstract class DataDictionary
      *
      * @return string
      */
-    protected function _DBType()
+    protected function _dbType()
     {
-        return $this->connection->DbType();
+        return $this->connection->dbType();
     }
 
     /**
@@ -665,7 +665,7 @@ abstract class DataDictionary
     public function CreateTableSQL($tabname, $flds, $tableoptions = false)
     {
         if ($tableoptions && is_string($tableoptions)) {
-            $dbtype = $this->_DBType();
+            $dbtype = $this->_dbType();
             $tableoptions = [$dbtype => $tableoptions];
         }
 
@@ -836,13 +836,15 @@ abstract class DataDictionary
             //--------------------
             // CONSTRUCT FIELD SQL
             if ($fdefts) {
-                if (substr($this->_DbType(), 0, 5) == 'mysql') {
+                $dbtype = $this->_dbType();
+                if (strncasecmp($dbtype, 'mysql', 5) == 0) {
                     $ftype = 'TIMESTAMP';
                 } else {
                     $fdefault = $this->connection->sysTimeStamp;
                 }
             } elseif ($fdefdate) {
-                if (substr($this->_DBType(), 0, 5) == 'mysql') {
+                $dbtype = $this->_dbType();
+                if (strncasecmp($dbtype, 'mysql', 5) == 0) {
                     $ftype = 'TIMESTAMP';
                 } else {
                     $fdefault = $this->connection->sysDate;
@@ -966,7 +968,7 @@ abstract class DataDictionary
      */
     protected function get_dbtype_options($opts, $suffix = null)
     {
-        $dbtype = $this->_DBType();
+        $dbtype = $this->_dbType();
         $list = array($dbtype.$suffix, strtoupper($dbtype).$suffix, strtolower($dbtype).$suffix);
 
         foreach ($list as $one) {
