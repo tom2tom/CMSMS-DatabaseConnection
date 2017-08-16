@@ -180,7 +180,7 @@ abstract class Connection
      *
      * @return string
      */
-    abstract public function DbType();
+    abstract public function dbType();
 
     /**
      * Open the database connection.
@@ -517,7 +517,6 @@ abstract class Connection
     abstract public function hasFailedTrans();
 
     //// sequence table stuff
-    // these methods are compatibility-stubs for DataDictionary methods
 
     /**
      * For use with sequence tables, this method will generate a new ID value.
@@ -556,33 +555,36 @@ abstract class Connection
     //// time and date stuff
 
     /**
-     * A utility method to convert a unix timestamp into a database specific string suitable
-     * for use in queries.
+     * A utility method to convert a unix timestamp into a database-specific
+     * string suitable for use in queries.
      *
-     * @param int $timestamp
+     * @param mixed $time number, or string (e.g. from PHP Date()), or DateTime object
      *
-     * @return string
+     * @return quoted string representing server/local date & time, or 'NULL'
      */
-    public function DBTimeStamp($timestamp)
+    public function dbTimeStamp($time)
     {
-        if (empty($timestamp) && $timestamp !== 0) {
-            return 'null';
+        if (empty($time) && !is_numeric($time)) {
+            return 'NULL';
         }
 
-        // strlen(14) allows YYYYMMDDHHMMSS format
-        if (is_string($timestamp)) {
-            if (!preg_match('/[0-9-\s:]*/', $timestamp)) {
-                return 'null';
+        if (is_numeric($time)) {
+            $time = (int)($time + 0);
+        } elseif (is_string($time)) {
+            if (strcasecmp($time, 'NULL') == 0) {
+                return 'NULL';
             }
-            $tmp = strtotime($timestamp);
-            if ($tmp < 1) {
-                return;
-            }
-            $timestamp = $tmp;
+            $lvl = error_reporting(0);
+            $time = strtotime($time);
+            error_reporting($lvl);
+        } elseif ($time instanceof \DateTime) {
+            $time = $time->getTimestamp();
         }
-        if ($timestamp > 0) {
-            return date("'Y-m-d H:i:s'", $timestamp);
+
+        if ($time > 0) {
+            return date("'Y-m-d H:i:s'", $time);
         }
+        return 'NULL';
     }
 
     /**
@@ -593,7 +595,7 @@ abstract class Connection
      *
      * @return int
      */
-    public function UnixTimeStamp($str)
+    public function unixTimeStamp($str)
     {
         return strtotime($str);
     }
@@ -601,56 +603,63 @@ abstract class Connection
     /**
      * Convert a date into something that is suitable for writing to a database.
      *
-     * @param mixed $date Either a string date, or an integer timestamp
+     * @param mixed $date A string date, or an integer timestamp, or a DateTime object
      *
-     * @return string
+     * @return quoted, locale-formatted string representing server/local date, o 'NULL'
      */
-    public function DBDate($date)
+    public function dbDate($date)
     {
-        if (empty($date) && $date !== 0) {
-            return 'null';
+        if (empty($date) && !is_numeric($date)) {
+            return 'NULL';
         }
 
         if (is_string($date) && !is_numeric($date)) {
-            if ($date === 'null' || strncmp($date, "'", 1) === 0) {
-                return $date;
+            if (strcasecmp($date, 'NULL') == 0) {
+                return 'NULL';
             }
-            $date = $this->UnixDate($date);
+            $lvl = error_reporting(0);
+            $date = strtotime($date);
+            error_reporting($lvl);
+        } elseif ($date instanceof \DateTime) {
+            $date = $date->getTimestamp();
         }
 
-        return strftime('%x', $date);
+        if ($date > 0) {
+             return strftime('%x', $date);
+        }
+        return 'NULL';
     }
 
     /**
-     * Generate a unix timestamp representing the current date at midnight.
+     * Generate a unix timestamp representing the start of the current day.
      *
      * @deprecated
      *
      * @return int
      */
-    public function UnixDate()
+    public function unixDate()
     {
         return strtotime('today midnight');
     }
 
     /**
-     * An alias for the UnixTimestamp method.
+     * An alias for the unixTimestamp method.
      *
      * @return int
      */
     public function Time()
     {
-        return $this->UnixTimeStamp();
+        return $this->unixTimeStamp();
     }
 
     /**
-     * An Alias for the UnixDate method.
+     * An alias for the unixDate method.
      *
      * @return int
      */
     public function Date()
     {
-        return $this->UnixDate();
+        return $this->unixDate();
     }
 
     //// error and debug message handling
