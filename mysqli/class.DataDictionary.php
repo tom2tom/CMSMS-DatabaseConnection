@@ -230,10 +230,10 @@ class DataDictionary extends \CMSMS\Database\DataDictionary
             throw new \LogicException('empty table name specified for '.__METHOD__);
         }
 
-        $sql = 'SHOW COLUMNS FROM ?';
-        $rs = $this->connection->getArray($sql, $table);
+        $sql = 'SHOW COLUMNS FROM '.$table;
+        $rs = $this->connection->getArray($sql);
         if (is_array($rs) && count($rs)) {
-            $out = array();
+            $out = [];
             foreach ($rs as $row) {
                 $out[] = $row['Field'];
             }
@@ -280,7 +280,7 @@ class DataDictionary extends \CMSMS\Database\DataDictionary
 
     public function _IndexSQL($idxname, $tabname, $flds, $idxoptions)
     {
-        $sql = array();
+        $sql = [];
 
         if (isset($idxoptions['REPLACE']) || isset($idxoptions['DROP'])) {
             if ($this->alterTableAddIndex) {
