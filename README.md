@@ -20,3 +20,5 @@ The changes here are:
 * code reformatted per PSR-2
 ## Installation
 Together, the files here constitute a drop-in replacement for all files in the folder [[CMSMS root directory]]/lib/classes/Database
+
+Optionally, you can apply the patch CMSApp-2.2.2.diff to clean up the interface.
