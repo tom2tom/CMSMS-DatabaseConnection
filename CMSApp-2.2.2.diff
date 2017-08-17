@@ -1,0 +1,28 @@
+--- lib/classes/class.CmsApp.php	2017-08-17 19:15:48.233484772 +1000
++++ lib/classes/class.CmsApp.php	2017-08-18 08:33:49.343493764 +1000
+@@ -294,10 +294,9 @@
+ 
+ 	/**
+-	* Get a handle to the ADODB database object. You can then use this
++	* Get a handle to the database. You can then use this
+ 	* to perform all kinds of database operations.
+ 	*
+-	* @link http://phplens.com/lens/adodb/docs-adodb.htm
+ 	* @final
+-	* @return ADOConnection a handle to the ADODB database object
++	* @return \CMSMS\Database\Connection object
+ 	*/
+ 	final public function &GetDb()
+@@ -310,9 +309,8 @@
+ 
+ 		if( !isset($DONT_LOAD_DB) ) {
+-            $config = \cms_config::get_instance();
+-            $this->db = \CMSMS\Database\compatibility::init($config);
++			$this->db = new \CMSMS\Database\mysqli\Connection();
++			include cms_join_path(__DIR__,'Database','class.compatibility.php'); //make old stuff available
++			return $this->db;
+ 		}
+-
+-		return $this->db;
+ 	}
+ 
