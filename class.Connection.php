@@ -51,72 +51,54 @@ namespace CMSMS\Database;
  * @copyright Copyright (C) 2017 Robert Campbell <calguy1000@cmsmadesimple.org>
  *
  * @since 2.2
- *
- * @property-read float $query_time_total The total query time so far in this request (in seconds)
- * @property-read int $query_count The total number of queries executed so far
  */
 abstract class Connection
 {
     /**
-     * This constant defines an error with connecting to the database.
+     * Defines an error with connecting to the database.
      */
     const ERROR_CONNECT = 'CONNECT';
 
     /**
-     * This constant defines an error with an execute statement.
+     * Defines an error related to statement execution.
      */
     const ERROR_EXECUTE = 'EXECUTE';
 
     /**
-     * This constant defines an error with a transaction.
+     * Defines an error with a transaction.
      */
     const ERROR_TRANSACTION = 'TRANSACTION';
 
     /**
-     * This constant defines an error in a datadictionary command.
+     * Defines an error related to statement preparation.
+     */
+    const ERROR_PREPARE = 'PREPARE';
+
+    /**
+     * Defines an error in a datadictionary command.
      */
     const ERROR_DATADICT = 'DATADICTIONARY';
 
     /**
-     * @ignore
+     * Defines a parameter-error in a method call.
      */
-    private $_debug = false;
+    const ERROR_PARAM = 'PARAMETER';
+
+    /**
+     * @ignore
+     * bool Whether debug mode is enabled
+     */
+    private $_debug;
 
     /**
      * @ignore
      */
-    private $_debug_cb;
+    private $_debug_cb = null;
 
     /**
      * @ignore
      */
     private $_query_count = 0;
-
-    /**
-     * @ignore
-     */
-    private $_queries = [];
-
-    /**
-     * @ignore
-     */
-    private $_errorhandler;
-
-    /**
-     * The actual connectionspec object.
-     *
-     * @internal
-     */
-    protected $_connectionSpec;
-
-    /**
-     * The last SQL command executed.
-     *
-     * @internal
-     *
-     * @param string $sql
-     */
-    protected $sql;
 
     /**
      * Accumulated sql query time.
@@ -125,16 +107,40 @@ abstract class Connection
      *
      * @param float $query_time_total
      */
-    protected $query_time_total = 0;
+    protected $_query_time_total = 0;
+
+    /**
+     * @ignore
+     */
+//    private $_queries = [];
+
+    /**
+     * The last SQL command executed.
+     *
+     * @internal
+     *
+     * @param string $sql
+     */
+    protected $_sql;
+
+    /**
+     * @internal
+     *
+     * @param string $type  The database connection type
+     */
+    protected $_type;
 
     /**
      * Construct a new Connection.
      *
-     * @param \CMSMS\Database\ConnectionSpec $spec
      */
-    public function __construct(ConnectionSpec $spec)
+    public function __construct()
     {
-        $this->_connectionSpec = $spec;
+        $this->_debug = defined('CMS_DEBUG') && CMS_DEBUG != 0;
+        if ($this->_debug) {
+            $this->_debug_cb = 'debug_buffer';
+        }
+        $this->_errorhandler= [$this, 'on_error'];
     }
 
     /**
@@ -142,11 +148,13 @@ abstract class Connection
      */
     public function __get($key)
     {
-        if ($key == 'query_time_total') {
-            return $this->query_time_total;
-        }
-        if ($key == 'query_count') {
+        switch ($key) {
+         case 'query_time_total':
+            return $this->_query_time_total;
+         case 'query_count':
             return $this->_query_count;
+         default:
+            return null;
         }
     }
 
@@ -155,39 +163,35 @@ abstract class Connection
      */
     public function __isset($key)
     {
-        if ($key == 'query_time_total') {
+        switch ($key) {
+         case 'query_time_total':
+         case 'query_count':
             return true;
+         default:
+           return false;
         }
-        if ($key == 'query_count') {
-            return true;
-        }
-
-        return false;
     }
-
-    /**
-     * Create a new data dictionary object.
-     * Data Dictionary objects are used for manipulating tables, i.e: creating, altering and editing them.
-     *
-     * @deprecated - use new <namespace>DataDictionary(Connection-object)
-     *
-     * @return <namespace>DataDictionary
-     */
-    abstract public function NewDataDictionary();
 
     /**
      * Return the database type.
      *
      * @return string
      */
-    abstract public function dbType();
+    public function dbType()
+    {
+        return $this->_type;
+    }
 
     /**
      * Open the database connection.
      *
+     * @deprecated
      * @return bool Success or failure
      */
-    abstract public function connect();
+    final public function connect()
+    {
+        return true;
+    }
 
     /**
      * An alias for close.
@@ -516,7 +520,7 @@ abstract class Connection
      */
     abstract public function hasFailedTrans();
 
-    //// sequence table stuff
+    //// sequence tables
 
     /**
      * For use with sequence tables, this method will generate a new ID value.
@@ -701,9 +705,7 @@ abstract class Connection
     public function SetDebugMode($flag = true, $debug_handler = null)
     {
         $this->_debug = (bool) $flag;
-        if ($debug_handler && is_callable($this->_debug_handler)) {
-            $this->_debug_cb = $debug_handler;
-        }
+        $this->SetDebugCallback($debug_handler);
     }
 
     /**
@@ -711,9 +713,13 @@ abstract class Connection
      *
      * @param callable $debug_handler
      */
-    public function SetDebugCallback(callable $debug_handler = null)
+    public function SetDebugCallback($debug_handler = null)
     {
-        $this->_debug_cb = $debug_handler;
+        if ($debug_handler && is_callable($debug_handler)) {
+            $this->_debug_cb = $debug_handler;
+        } elseif (!$debug_handler) {
+            $this->_debug_cb = null;
+        }
     }
 
     /**
@@ -738,25 +744,33 @@ abstract class Connection
      * This method will by default call the error handler if it has been set.
      * If no error handler is set, an exception will be thrown.
      *
+     * @param string $errtype       The type of error
+     * @param int    $error_number  The error number
+     * @param string $error_message The error message
+     */
+    public function OnError($errtype, $error_number, $error_message)
+    {
+        if ($this->_errorhandler && is_callable($this->_errorhandler)) {
+            call_user_func($this->_errorhandler, $errtype, $error_number, $error_message);
+        }
+    }
+
+    /**
+     * Default error handler
+     *
      * @internal
      *
      * @param string $errtype       The type of error
      * @param int    $error_number  The error number
      * @param string $error_message The error message
      */
-    protected function OnError($errtype, $error_number, $error_message)
+
+    protected function on_error($errtype, $error_number, $error_msg)
     {
-        if ($this->_errorhandler && is_callable($this->_errorhandler)) {
-            call_user_func($this->_errorhandler, $this, $errtype, $error_number, $error_message);
-
-            return;
-        }
-
-        switch ($errtype) {
-         case self::ERROR_CONNECT:
-            throw new DatabaseConnectionException($error_message, $error_number);
-         case self::ERROR_EXECUTE:
-            throw new DatabaseException($error_message, $error_number, $this->sql, $this->_connectionSpec);
+        debug_to_log("Database error: $errtype($error_number) - $error_msg");
+        debug_bt_to_log();
+        if ($this->_debug) {
+            \CmsApp::get_instance()->add_error(debug_display($error_msg, '', false, true));
         }
     }
 
@@ -764,95 +778,20 @@ abstract class Connection
 
     /**
      * Create a new database connection object.
-     * This is the preferred way to open a new database connection.
      *
-     * @param \CMSMS\Database\Connectionspec $spec An object describing the database to connect to
+     * @deprecated - use new <namespace>\Connection()
      *
-     * @return \CMSMS\Database\Connection
-     *
-     * @todo  Move this into a factory class
      */
-    public static function Initialize(ConnectionSpec $spec)
+    public static function Initialize()
     {
-        if (!$spec->valid()) {
-            throw new ConnectionSpecException('Invalid or incorrect configuration information');
-        }
-        $connection_class = '\\CMSMS\\Database\\'.$spec->type.'\\Connection';
-        if (!class_exists($connection_class)) {
-            throw new \LogicException('Could not find a database abstraction layer named '.$spec->type);
-        }
-
-        $obj = new $connection_class($spec);
-        if (!($obj instanceof self)) {
-            throw new \LogicException("$connection_class is not derived from the primary database class.");
-        }
-        if ($spec->debug) {
-            $obj->SetDebugMode();
-        }
-        $obj->connect();
-
-        if ($spec->auto_exec) {
-            $obj->execute($spec->auto_exec);
-        }
-
-        return $obj;
-    }
-}
-
-/**
- * A special type of exception related to database queries.
- */
-class DatabaseException extends \LogicException
-{
-    /**
-     * @internal
-     */
-    protected $_connection;
-
-    /**
-     * @internal
-     */
-    protected $_sql;
-
-    /**
-     * Constructor.
-     *
-     * @param string $msg    The message string
-     * @param int    $number The error number
-     * @param string $sql    The related SQL statement, if any
-     * @param \CMSMS\Database\ConnectionSpec The connection specification
-     */
-    public function __construct($msg, $number, $sql, ConnectionSpec $connection)
-    {
-        parent::__construct($msg, $number);
-        $this->_connection = $connection;
-        $this->_sql = $sql;
     }
 
     /**
-     * Get the SQL statement related to this exception.
+     * Create a new data dictionary object.
+     * Data Dictionary objects are used for manipulating tables, i.e: creating, altering and editing them.
      *
-     * @return string
-     */
-    public function getSQL()
-    {
-        return $this->_sql;
-    }
-
-    /**
-     * Get the Connectionspec that was used when generating the error.
      *
-     * @return \CMSMS\Database\ConnectionSpec
+     * @return <namespace>DataDictionary
      */
-    public function getConnectionSpec()
-    {
-        return $this->_connection;
-    }
-}
-
-/**
- * A special exception indicating a problem connecting to the database.
- */
-class DatabaseConnectionException extends \Exception
-{
+    abstract public function NewDataDictionary();
 }
