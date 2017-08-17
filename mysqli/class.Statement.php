@@ -48,13 +48,13 @@ namespace CMSMS\Database\mysqli;
 class Statement
 {
     /**
-     * @ignore
+     * @errset EmptyResultSet object with error-properties set, or null
      */
-    protected $_conn; // Connection object
+    public $errset = null;
     /**
      * @ignore
      */
-    protected $_sql;
+    protected $_conn; // Connection object
     /**
      * @ignore
      */
@@ -62,14 +62,12 @@ class Statement
     /**
      * @ignore
      */
-    protected $_prep = false;
-    protected $_bound = false;
-
+    protected $_sql;
     /**
      * @ignore
      */
-    protected $_errno;
-    protected $_errmsg;
+    protected $_prep = false; // whether prepare() succeeded
+    protected $_bound = false; // whether bind() succeeded
     /**
      * @ignore
      */
@@ -149,18 +147,14 @@ class Statement
     {
         $mysql = $this->_conn->get_inner_mysql();
         if (!$mysql || !$this->_conn->isConnected()) {
-            $this->_errno = 99;
-            $this->_error = 'Attempt to create prepared statement when database is not connected';
-            $this->_conn->OnError(\CMSMS\Database\Connection::ERROR_CONNECT,
-                $this->_errno, $this->_error);
+            $this->errset = $this->ErrorSet(\CMSMS\Database\Connection::ERROR_CONNECT,
+                99, 'Attempt to create prepared statement when database is not connected');
             $this->_prep = false;
 
             return false;
         } elseif (!($sql || $this->_sql)) {
-            $this->_errno = -1;
-            $this->_error = 'No SQL to prepare';
-            $this->_conn->OnError(\CMSMS\Database\Connection::ERROR_PARAM,
-                $this->_errno, $this->_error);
+            $this->errset = $this->ErrorSet(\CMSMS\Database\Connection::ERROR_PARAM,
+                -1, 'No SQL to prepare');
             $this->_prep = false;
 
             return false;
@@ -174,13 +168,15 @@ class Statement
         $this->_stmt = $mysql->stmt_init();
         $this->_prep = $this->_stmt->prepare((string) $sql);
         if ($this->_prep) {
+            $this->errset = null;
+
             return true;
         }
-        $this->_errno = $this->_stmt->errno;
-        $this->_error = $this->_stmt->error;
+
+        $this->errset = $this->ErrorSet(\CMSMS\Database\Connection::ERROR_PREPARE,
+            $this->_stmt->errno, $this->_stmt->error);
         $this->_stmt = null;
-        $this->_conn->OnError(\CMSMS\Database\Connection::ERROR_PREPARE,
-            $this->_errno, $this->_error);
+
         return false;
     }
 
@@ -196,14 +192,14 @@ class Statement
                 $this->prepare($this->_sql);
                 if (!$this->_prep) {
                     $this->_bound = false;
+
                     return false;
                 }
             } else {
-                $this->_errno = -1;
-                $this->_error = 'No SQL to bind to';
-                $this->_conn->OnError(\CMSMS\Database\Connection::ERROR_PARAM,
-                    $this->_errno, $this->_error);
+                $this->errset = $this->ErrorSet(\CMSMS\Database\Connection::ERROR_PARAM,
+                   -1, 'No SQL to bind to');
                 $this->_bound = false;
+
                 return false;
             }
         }
@@ -252,14 +248,16 @@ class Statement
         }
 
         if (call_user_func_array([$this->_stmt, 'bind_param'], $bound)) {
+            $this->errset = null;
             $this->_bound = true;
+
             return true;
         }
+
+        $this->errset = $this->ErrorSet(\CMSMS\Database\Connection::ERROR_PARAM,
+            -1, 'Failed to bind paramers to prepared statement');
         $this->_bound = false;
-        $this->_errno = -1;
-        $this->_error = 'Failed to bind paramers to prepared statement';
-        $this->_conn->OnError(\CMSMS\Database\Connection::ERROR_PARAM,
-            $this->_errno, $this->_error);
+
         return false;
     }
 
@@ -275,10 +273,8 @@ class Statement
                 $this->prepare($this->_sql);
                 if (!$this->_prep) {
                     $this->_bound = false;
-                    $rs = new \CMSMS\Database\EmptyResultSet();
-                    $rs->errno = $this->errno;
-                    $rs->error = $this->error;
-                    return $rs;
+
+                    return $this->errset;
                 }
             } else {
                 return $this->ErrorSet(\CMSMS\Database\Connection::ERROR_PARAM, -1,
@@ -292,16 +288,14 @@ class Statement
             if (is_array($args) && count($args) == 1 && is_array($args[0])) {
                 $args = $args[0];
             }
-            if ($pc != count($args)) {
-                return $this->ErrorSet(\CMSMS\Database\Connection::ERROR_PARAM, -1,
-                    'Incorrect number of bound parameters - should be '.$pc);
-            }
-            $this->bind($args);
-            if (!$this->_bound) {
-                 $rs = new \CMSMS\Database\EmptyResultSet();
-                 $rs->errno = $this->errno;
-                 $rs->error = $this->error;
-                 return $rs;
+            if ($pc == count($args)) {
+                $this->bind($args);
+                if (!$this->_bound) {
+                    return $this->errset;
+                }
+            } else {
+                return $this->ErrorSet(\CMSMS\Database\Connection::ERROR_PARAM,
+                    -1, 'Incorrect number of bound parameters - should be '.$pc);
             }
         } elseif ($pc > 0 && !$this->_bound) {
             return $this->ErrorSet(\CMSMS\Database\Connection::ERROR_PARAM, -1,
@@ -309,7 +303,8 @@ class Statement
         }
 
         if (!$this->_stmt->execute()) {
-            return $this->ErrorSet(\CMSMS\Database\Connection::ERROR_EXECUTE, $this->_stmt->errno, $this->_stmt->error);
+            return $this->ErrorSet(\CMSMS\Database\Connection::ERROR_EXECUTE,
+                $this->_stmt->errno, $this->_stmt->error);
         }
 
         if ($this->_stmt->field_count > 0) {
