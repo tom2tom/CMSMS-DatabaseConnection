@@ -44,8 +44,8 @@ final class EmptyResultSet extends ResultSet
     /**
      * @ignore
      */
-    private $errno = 0;
-    private $error = '';
+    private $_errno = 0;
+    private $_error = '';
 
     /**
      * @ignore
@@ -54,11 +54,11 @@ final class EmptyResultSet extends ResultSet
     {
         switch ($key) {
          case 'errno':
-            $this->errno = $val;
+            $this->_errno = $val;
             break;
          case 'error':
          case 'errmsg':
-            $this->error = $val;
+            $this->_error = $val;
             break;
         }
     }
@@ -70,10 +70,10 @@ final class EmptyResultSet extends ResultSet
     {
         switch ($key) {
          case 'errno':
-            return $this->errno;
+            return $this->_errno;
          case 'error':
          case 'errmsg':
-            return $this->error;
+            return $this->_error;
          case 'EOF':
             return true;
          case 'count':
