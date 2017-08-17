@@ -41,43 +41,48 @@ class Connection extends \CMSMS\Database\Connection
     protected $_in_smart_transaction = 0;
     protected $_transaction_status = true;
 
-    public function dbType()
+    public function __construct()
     {
-        return 'mysqli';
-    }
-
-    public function connect()
-    {
-        if (!class_exists('\mysqli')) {
-            //$this->OnError(parent::ERROR_X, -1, 'message');
-            throw new \Exception('Configuration error... mysqli functions are not available');
-        }
-
-        mysqli_report(MYSQLI_REPORT_STRICT);
-        try {
-            $this->_mysql = new \mysqli($this->_connectionSpec->host, $this->_connectionSpec->username,
-                                         $this->_connectionSpec->password,
-                                         $this->_connectionSpec->dbname,
-                                         (int) $this->_connectionSpec->port);
-            if ($this->_mysql->connect_error) {
+        if (class_exists('\mysqli')) {
+            $config = \cms_config::get_instance();
+            mysqli_report(MYSQLI_REPORT_STRICT);
+            try {
+                $this->_mysql = new \mysqli(
+                 $config['db_hostname'], $config['db_username'],
+                 $config['db_password'], $config['db_name'],
+                 (int)$config['db_port']);
+                if (!$this->_mysql->connect_error) {
+                    parent::__construct();
+                    $this->_type = 'mysqli';
+                    if ($config['set_names']) {
+                        $this->_mysql->set_charset('utf8');
+                    }
+                    if ($config['set_db_timezone']) {
+                        $dt = new \DateTime(new \DateTimeZone($config['timezone']));
+                        $offset = $dt->getOffset();
+                        if ($offset < 0) {
+                            $offset = -$offset;
+                            $symbol = '-';
+                        } else {
+                            $symbol = '+';
+                        }
+                        $hrs = (int)($offset / 3600);
+                        $mins = (int)($offset % 3600 / 60);
+                        $sql = sprintf("SET time_zone = '%s%02d:%02d'", $symbol, $hrs, $mins);
+                        $this->execute($sql);
+                    }
+                } else {
+                    $this->_mysql = null;
+                    $this->on_error(parent::ERROR_CONNECT, mysqli_connect_errno(), mysqli_connect_error());
+                }
+            } catch (\Exception $e) {
                 $this->_mysql = null;
-                $this->OnError(parent::ERROR_CONNECT, mysqli_connect_errno(), mysqli_connect_error());
-
-                return false;
+                $this->on_error(parent::ERROR_CONNECT, mysqli_connect_errno(), mysqli_connect_error());
             }
-
-            return true;
-        } catch (\Exception $e) {
-            $this->_mysql = null;
-            $this->OnError(parent::ERROR_CONNECT, mysqli_connect_errno(), mysqli_connect_error());
-
-            return false;
+        } else {
+            $this->on_error(parent::ERROR_CONNECT, 98,
+                'Configuration error: mysqli class is not available');
         }
-    }
-
-    public function NewDataDictionary()
-    {
-        return new DataDictionary($this);
     }
 
     public function close()
@@ -171,11 +176,11 @@ class Connection extends \CMSMS\Database\Connection
      */
     protected function do_sql($sql)
     {
-        $this->sql = $sql;
+        $this->_sql = $sql;
         if ($this->_debug) {
             $time_start = microtime(true);
             $result = $this->_mysql->query($sql); //mysqli_result or boolean
-            $this->query_time_total += microtime(true) - $time_start;
+            $this->_query_time_total += microtime(true) - $time_start;
         } else {
             $result = $this->_mysql->query($sql);
         }
@@ -185,21 +190,26 @@ class Connection extends \CMSMS\Database\Connection
             return new ResultSet($this, $result);
         }
         $this->failTrans();
-        $this->OnError(parent::ERROR_EXECUTE, $this->_mysql->errno, $this->_mysql->error);
+        $n = $this->_mysql->errno;
+        $s = $this->_mysql->error;
+        $this->OnError(parent::ERROR_EXECUTE, $n, $s);
+        $rs = new \CMSMS\Database\EmptyResultSet();
+        $rs->errno = $n;
+        $rs->error = $s;
 
-        return new \CMSMS\Database\EmptyResultSet();
+        return $rs;
     }
 
     public function prepare($sql)
     {
         $stmt = new Statement($this, $sql);
-        try {
-            $stmt->prepare($sql);
+        if ($stmt->prepare($sql)) {
+            $this->_sql = $sql;
 
             return $stmt;
-        } catch (\LogicException $e) {
-            return false;
         }
+
+        return false;
     }
 
     public function execute($sql, $valsarr = null)
@@ -209,27 +219,20 @@ class Connection extends \CMSMS\Database\Connection
                 $valsarr = [$valsarr];
             }
             if (is_string($sql)) {
-                $stmt = new Statement($this);
-                try {
-                    $stmt->prepare($sql);
+                $stmt = new Statement($this, $sql);
 
-                    return $stmt->execute($valsarr);
-                } catch (\LogicException $e) {
-                    //TODO log debug messsage
-                    $adbg = $e->messsage;
-                    $X1 = $CRASH;
-                }
+                return $stmt->execute($valsarr);
             } elseif (is_object($sql) && $sql instanceof CMSMS\Database\mysqli\Statement) {
-                try {
-                    return $sql->execute($valsarr);
-                } catch (\LogicException $e) {
-                    //TODO log debug messsage
-                    $adbg = $e->messsage;
-                    $X2 = $CRASH;
-                }
+                return $sql->execute($valsarr);
             }
+			$n = -1;
+			$s = 'Invalid bind-parameter(s) supplied to execute method';
+            $this->OnError(parent::ERROR_PARAM, $n, $s);
+			$rs = new \CMSMS\Database\EmptyResultSet();
+			$rs->errno = $n;
+			$rs->error = $s;
 
-            return new \CMSMS\Database\EmptyResultSet();
+			return $rs;
         }
 
         return $this->do_sql($sql);
@@ -357,5 +360,10 @@ class Connection extends \CMSMS\Database\Connection
         $res = $this->do_sql("DROP TABLE $seqname");
 
         return $res !== false;
+    }
+
+    public function NewDataDictionary()
+    {
+        return new DataDictionary($this);
     }
 }
