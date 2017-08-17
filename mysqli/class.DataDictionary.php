@@ -39,6 +39,7 @@ class DataDictionary extends \CMSMS\Database\DataDictionary
     public function __construct(Connection $conn)
     {
         parent::__construct($conn);
+        $this->addCol = ' ADD COLUMN';
         $this->alterCol = ' MODIFY COLUMN';
         $this->alterTableAddIndex = true;
         $this->dropTable = 'DROP TABLE IF EXISTS %s'; // requires mysql 3.22 or later
