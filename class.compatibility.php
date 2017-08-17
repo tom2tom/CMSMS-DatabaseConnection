@@ -42,66 +42,20 @@ namespace CMSMS\Database {
     final class compatibility
     {
         /**
-         * @ignore
-         */
-        private function __construct()
-        {
-        }
-
-        /**
          * Initialize the database connection according to config settings.
          *
-         * @internal
+         * @return \CMSMS\Database\mysqli\Connection
          *
-         * @param cms_config $config The config object
-         *
-         * @return \CMSMS\Database\Connection
+         * @deprecated
          */
-        public static function init(\cms_config $config)
+        public static function init()
         {
-            $spec = new ConnectionSpec();
-            $spec->type = $config['dbms'];
-            $spec->host = $config['db_hostname'];
-            $spec->username = $config['db_username'];
-            $spec->password = $config['db_password'];
-            $spec->dbname = $config['db_name'];
-            $spec->port = $config['db_port'];
-            $spec->debug = CMS_DEBUG;
-
-            $tmp = [];
-            if ($config['set_names']) {
-                $tmp[] = "NAMES 'utf8'";
-            }
-            if ($config['set_db_timezone']) {
-                $dt = new \DateTime();
-                $dtz = new \DateTimeZone($config['timezone']);
-                $offset = timezone_offset_get($dtz, $dt);
-                $symbol = ($offset < 0) ? '-' : '+';
-                $hrs = abs((int) ($offset / 3600));
-                $mins = abs((int) ($offset % 3600));
-                $tmp[] = sprintf("time_zone = '%s%d:%02d'", $symbol, $hrs, $mins);
-            }
-            if (count($tmp)) {
-                $spec->auto_exec = 'SET '.implode(',', $tmp);
-            }
-
-            $obj = Connection::Initialize($spec);
-            $obj->SetErrorHandler('\\CMSMS\Database\\compatibility::on_error');
-            if ($spec->debug) {
-                $obj->SetDebugCallback('debug_buffer');
-            }
-
-            return $obj;
+            return new mysqli\Connection();
         }
 
-        public static function on_error(Connection $conn, $errtype, $error_number, $error_msg)
+        public static function on_error()
         {
-            debug_to_log("Database Error: $errtype($error_number) - $error_msg");
-            debug_bt_to_log();
-            if (!defined('CMS_DEBUG') || CMS_DEBUG == 0) {
-                return;
-            }
-            \CmsApp::get_instance()->add_error(debug_display($error_msg, '', false, true));
+            // do nothing
         }
 
         /**
