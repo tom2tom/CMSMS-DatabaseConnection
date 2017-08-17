@@ -51,7 +51,7 @@ if (!function_exists('ctype_alnum')) {
 function _array_change_key_case($an_array)
 {
     if (is_array($an_array)) {
-        $new_array = array();
+        $new_array = [];
         foreach ($an_array as $key => $value) {
             $new_array[strtoupper($key)] = $value;
         }
@@ -71,8 +71,8 @@ function Lens_ParseArgs($args, $endstmtchar = ',', $tokenchars = '_.-')
     $intoken = false;
     $stmtno = 0;
     $endquote = false;
-    $tokens = array();
-    $tokens[$stmtno] = array();
+    $tokens = [];
+    $tokens[$stmtno] = [];
     $max = strlen($args);
     $quoted = false;
 
@@ -110,7 +110,7 @@ function Lens_ParseArgs($args, $endstmtchar = ',', $tokenchars = '_.-')
                     }
                     $quoted = true;
                     $intoken = true;
-                    $tokarr = array();
+                    $tokarr = [];
                 } elseif ($endquote == $ch) {
                     $ch2 = substr($args, $pos + 1, 1);
                     if ($ch2 == $endquote) {
@@ -133,7 +133,7 @@ function Lens_ParseArgs($args, $endstmtchar = ',', $tokenchars = '_.-')
                 }
                 $quoted = true;
                 $intoken = true;
-                $tokarr = array();
+                $tokarr = [];
                 if ($ch == '`') {
                     $tokarr[] = '`';
                 }
@@ -143,13 +143,13 @@ function Lens_ParseArgs($args, $endstmtchar = ',', $tokenchars = '_.-')
             if (!$intoken) {
                 if ($ch == $endstmtchar) {
                     $stmtno += 1;
-                    $tokens[$stmtno] = array();
+                    $tokens[$stmtno] = [];
                     break;
                 }
                 $intoken = true;
                 $quoted = false;
                 $endquote = false;
-                $tokarr = array();
+                $tokarr = [];
             }
             if ($quoted) {
                 $tokarr[] = $ch;
@@ -159,9 +159,9 @@ function Lens_ParseArgs($args, $endstmtchar = ',', $tokenchars = '_.-')
                 if ($ch == $endstmtchar) {
                     $tokens[$stmtno][] = implode('', $tokarr);
                     $stmtno += 1;
-                    $tokens[$stmtno] = array();
+                    $tokens[$stmtno] = [];
                     $intoken = false;
-                    $tokarr = array();
+                    $tokarr = [];
                     break;
                 }
                 $tokens[$stmtno][] = implode('', $tokarr);
@@ -390,7 +390,7 @@ abstract class DataDictionary
      * @param string[] $sql             An array of sql commands
      * @param bool     $continueOnError Whether to continue on errors
      *
-     * @return int 2 for no errors, 1 if an error occured
+     * @return int 2 for no errors, 1 if continued after an error, 0 immediately after error
      */
     public function ExecuteSQLArray($sql, $continueOnError = true)
     {
@@ -407,7 +407,7 @@ abstract class DataDictionary
                 }
             } catch (\Exception $e) {
                 if (!$continueOnError) {
-                    throw $e;
+                    return 0;
                 }
                 $rez = 1;
                 // eat the exception
@@ -428,7 +428,7 @@ abstract class DataDictionary
     public function CreateDatabase($dbname, $options = false)
     {
         $options = $this->_Options($options);
-        $sql = array();
+        $sql = [];
 
         $s = 'CREATE DATABASE '.$this->NameQuote($dbname);
         if (isset($options[$this->upperName])) {
@@ -489,7 +489,7 @@ abstract class DataDictionary
     public function AddColumnSQL($tabname, $flds)
     {
         $tabname = $this->TableName($tabname);
-        $sql = array();
+        $sql = [];
         list($lines, $pkey) = $this->_GenFields($flds);
         $alter = 'ALTER TABLE '.$tabname.$this->addCol.' ';
         foreach ($lines as $v) {
@@ -512,7 +512,7 @@ abstract class DataDictionary
     public function AlterColumnSQL($tabname, $flds, $tableflds = '', $tableoptions = '')
     {
         $tabname = $this->TableName($tabname);
-        $sql = array();
+        $sql = [];
         list($lines, $pkey) = $this->_GenFields($flds);
         $alter = 'ALTER TABLE '.$tabname.$this->alterCol.' ';
         foreach ($lines as $v) {
@@ -560,7 +560,7 @@ abstract class DataDictionary
         if (!is_array($flds)) {
             $flds = explode(',', $flds);
         }
-        $sql = array();
+        $sql = [];
         $alter = 'ALTER TABLE '.$tabname.$this->dropCol.' ';
         foreach ($flds as $v) {
             $sql[] = $alter.$this->NameQuote($v);
@@ -689,16 +689,16 @@ abstract class DataDictionary
     protected function _GenFields($flds, $widespacing = false)
     {
         if (is_string($flds)) {
-            $padding = '	 ';
+            $padding = '     ';
             $txt = $flds.$padding;
-            $flds = array();
+            $flds = [];
             $flds0 = Lens_ParseArgs($txt, ',');
             $hasparam = false;
             foreach ($flds0 as $f0) {
                 if (!count($f0)) {
                     break;
                 }
-                $f1 = array();
+                $f1 = [];
                 foreach ($f0 as $token) {
                     switch (strtoupper($token)) {
                     case 'CONSTRAINT':
@@ -719,8 +719,8 @@ abstract class DataDictionary
             }
         }
         $this->autoIncrement = false;
-        $lines = array();
-        $pkey = array();
+        $lines = [];
+        $pkey = [];
         foreach ($flds as $fld) {
             $fld = _array_change_key_case($fld);
             $fname = false;
@@ -921,7 +921,7 @@ abstract class DataDictionary
      */
     protected function _IndexSQL($idxname, $tabname, $flds, $idxoptions)
     {
-        $sql = array();
+        $sql = [];
 
         if (isset($idxoptions['REPLACE']) || isset($idxoptions['DROP'])) {
             $sql[] = sprintf($this->dropIndex, $idxname);
@@ -985,7 +985,7 @@ abstract class DataDictionary
      */
     protected function _TableSQL($tabname, $lines, $pkey, $tableoptions)
     {
-        $sql = array();
+        $sql = [];
 
         if (isset($tableoptions['REPLACE']) || isset($tableoptions['DROP'])) {
             $sql[] = sprintf($this->dropTable, $tabname);
@@ -1002,7 +1002,7 @@ abstract class DataDictionary
         $s = "CREATE TABLE $tabname (\n";
         $s .= implode(",\n", $lines);
         if (sizeof($pkey) > 0) {
-            $s .= ",\n				 PRIMARY KEY (";
+            $s .= ",\n                 PRIMARY KEY (";
             $s .= implode(', ', $pkey).')';
         }
         if (isset($tableoptions['CONSTRAINTS'])) {
@@ -1056,7 +1056,7 @@ abstract class DataDictionary
         if (!is_array($opts)) {
             return array();
         }
-        $newopts = array();
+        $newopts = [];
         foreach ($opts as $k => $v) {
             if (is_numeric($k)) {
                 $newopts[strtoupper($v)] = $v;
@@ -1094,7 +1094,7 @@ abstract class DataDictionary
             // existing fields to fields to update.
             // if the Metatype and size is exactly the
             // same, ignore - by Mark Newham
-            $holdflds = array();
+            $holdflds = [];
             foreach ($flds as $k => $v) {
                 if (isset($cols[$k]) && is_object($cols[$k])) {
                     $c = $cols[$k];
@@ -1119,7 +1119,7 @@ abstract class DataDictionary
         // already exists, alter table instead
         list($lines, $pkey) = $this->_GenFields($flds);
         $alter = 'ALTER TABLE '.$this->TableName($tablename);
-        $sql = array();
+        $sql = [];
 
         foreach ($lines as $id => $v) {
             if (isset($cols[$id]) && is_object($cols[$id])) {
