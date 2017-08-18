@@ -124,19 +124,6 @@ class Statement
     }
 
     /**
-     * @internal
-     */
-    protected function ErrorSet($errtype, $num, $msg)
-    {
-        $this->_conn->OnError($errtype, $num, $msg);
-        $rs = new \CMSMS\Database\EmptyResultSet();
-        $rs->errno = $num;
-        $rs->error = $msg;
-
-        return $rs;
-    }
-
-    /**
      * Prepare the query.
      *
      * @param optional string $sql parameterized SQL command default null
@@ -147,13 +134,13 @@ class Statement
     {
         $mysql = $this->_conn->get_inner_mysql();
         if (!$mysql || !$this->_conn->isConnected()) {
-            $this->errset = $this->ErrorSet(\CMSMS\Database\Connection::ERROR_CONNECT,
+            $this->errset = $this->_conn->ErrorSet(\CMSMS\Database\Connection::ERROR_CONNECT,
                 99, 'Attempt to create prepared statement when database is not connected');
             $this->_prep = false;
 
             return false;
         } elseif (!($sql || $this->_sql)) {
-            $this->errset = $this->ErrorSet(\CMSMS\Database\Connection::ERROR_PARAM,
+            $this->errset = $this->_conn->ErrorSet(\CMSMS\Database\Connection::ERROR_PARAM,
                 -1, 'No SQL to prepare');
             $this->_prep = false;
 
@@ -173,7 +160,7 @@ class Statement
             return true;
         }
 
-        $this->errset = $this->ErrorSet(\CMSMS\Database\Connection::ERROR_PREPARE,
+        $this->errset = $this->_conn->ErrorSet(\CMSMS\Database\Connection::ERROR_PREPARE,
             $this->_stmt->errno, $this->_stmt->error);
         $this->_stmt = null;
 
@@ -196,7 +183,7 @@ class Statement
                     return false;
                 }
             } else {
-                $this->errset = $this->ErrorSet(\CMSMS\Database\Connection::ERROR_PARAM,
+                $this->errset = $this->_conn->ErrorSet(\CMSMS\Database\Connection::ERROR_PARAM,
                    -1, 'No SQL to bind to');
                 $this->_bound = false;
 
@@ -254,7 +241,7 @@ class Statement
             return true;
         }
 
-        $this->errset = $this->ErrorSet(\CMSMS\Database\Connection::ERROR_PARAM,
+        $this->errset = $this->_conn->ErrorSet(\CMSMS\Database\Connection::ERROR_PARAM,
             -1, 'Failed to bind paramers to prepared statement');
         $this->_bound = false;
 
@@ -277,7 +264,7 @@ class Statement
                     return $this->errset;
                 }
             } else {
-                return $this->ErrorSet(\CMSMS\Database\Connection::ERROR_PARAM, -1,
+                return $this->_conn->ErrorSet(\CMSMS\Database\Connection::ERROR_PARAM, -1,
                     'No SQL to prepare');
             }
         }
@@ -294,16 +281,16 @@ class Statement
                     return $this->errset;
                 }
             } else {
-                return $this->ErrorSet(\CMSMS\Database\Connection::ERROR_PARAM,
+                return $this->_conn->ErrorSet(\CMSMS\Database\Connection::ERROR_PARAM,
                     -1, 'Incorrect number of bound parameters - should be '.$pc);
             }
         } elseif ($pc > 0 && !$this->_bound) {
-            return $this->ErrorSet(\CMSMS\Database\Connection::ERROR_PARAM, -1,
+            return $this->_conn->ErrorSet(\CMSMS\Database\Connection::ERROR_PARAM, -1,
                 'No bound parameters, and no arguments passed');
         }
 
         if (!$this->_stmt->execute()) {
-            return $this->ErrorSet(\CMSMS\Database\Connection::ERROR_EXECUTE,
+            return $this->_conn->ErrorSet(\CMSMS\Database\Connection::ERROR_EXECUTE,
                 $this->_stmt->errno, $this->_stmt->error);
         }
 
@@ -313,7 +300,7 @@ class Statement
                 if ($rs) {
                     return new ResultSet($this->conn, $rs);
                 } elseif (($n = $this->_stmt->errno) > 0) {
-                    return $this->ErrorSet(\CMSMS\Database\Connection::ERROR_EXECUTE, $n, $this->_stmt->error);
+                    return $this->_conn->ErrorSet(\CMSMS\Database\Connection::ERROR_EXECUTE, $n, $this->_stmt->error);
                 } else { //should never happen
                     return new \CMSMS\Database\EmptyResultSet();
                 }
