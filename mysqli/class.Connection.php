@@ -157,6 +157,9 @@ class Connection extends \CMSMS\Database\Connection
         return " IFNULL($field, $ifNull)";
     }
 
+    /**
+     * @internal
+     */
     protected function do_multisql($sql)
     {
         // no error checking for this stuff
@@ -190,14 +193,9 @@ class Connection extends \CMSMS\Database\Connection
             return new ResultSet($this, $result);
         }
         $this->failTrans();
-        $n = $this->_mysql->errno;
-        $s = $this->_mysql->error;
-        $this->OnError(parent::ERROR_EXECUTE, $n, $s);
-        $rs = new \CMSMS\Database\EmptyResultSet();
-        $rs->errno = $n;
-        $rs->error = $s;
-
-        return $rs;
+ 
+        return $this->ErrorSet(parent::ERROR_EXECUTE,
+            $this->_mysql->errno, $this->_mysql->error);
     }
 
     public function prepare($sql)
@@ -225,14 +223,9 @@ class Connection extends \CMSMS\Database\Connection
             } elseif (is_object($sql) && $sql instanceof CMSMS\Database\mysqli\Statement) {
                 return $sql->execute($valsarr);
             }
-			$n = -1;
-			$s = 'Invalid bind-parameter(s) supplied to execute method';
-            $this->OnError(parent::ERROR_PARAM, $n, $s);
-			$rs = new \CMSMS\Database\EmptyResultSet();
-			$rs->errno = $n;
-			$rs->error = $s;
 
-			return $rs;
+            return $this->ErrorSet(parent::ERROR_PARAM, -1,
+              'Invalid bind-parameter(s) supplied to execute method');
         }
 
         return $this->do_sql($sql);
