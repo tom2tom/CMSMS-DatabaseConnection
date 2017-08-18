@@ -774,6 +774,27 @@ abstract class Connection
         }
     }
 
+    /**
+     * Error handler
+     *
+     * @internal
+     *
+     * @param string $errtype       The type of error
+     * @param int    $error_number  The error number
+     * @param string $error_message The error message
+     *
+     * @return __NAMESPACE_\EmptyResultSet object with error-indicators set
+     */
+    public function ErrorSet($errtype, $num, $msg)
+    {
+        $this->OnError($errtype, $num, $msg);
+        $rs = new \CMSMS\Database\EmptyResultSet();
+        $rs->errno = $num;
+        $rs->error = $msg;
+
+        return $rs;
+    }
+
     //// initialization
 
     /**
@@ -789,7 +810,6 @@ abstract class Connection
     /**
      * Create a new data dictionary object.
      * Data Dictionary objects are used for manipulating tables, i.e: creating, altering and editing them.
-     *
      *
      * @return <namespace>DataDictionary
      */
