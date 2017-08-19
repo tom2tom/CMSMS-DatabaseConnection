@@ -36,6 +36,8 @@ namespace CMSMS\Database\mysqli;
 
 class Connection extends \CMSMS\Database\Connection
 {
+    public $nameQuote = '`'; // string to use to quote identifiers and names
+
     protected $_mysql;
     protected $_in_transaction = 0;
     protected $_in_smart_transaction = 0;
