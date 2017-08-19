@@ -222,7 +222,7 @@ class DataDictionary extends \CMSMS\Database\DataDictionary
     {
         $sql = 'SHOW TABLES';
         $list = $this->connection->getCol($sql);
-        if (count($list)) {
+        if ($list) {
             return $list;
         }
     }
@@ -230,19 +230,18 @@ class DataDictionary extends \CMSMS\Database\DataDictionary
     public function MetaColumns($table)
     {
         $table = trim($table);
-        if (!$table) {
-            throw new \LogicException('empty table name specified for '.__METHOD__);
-        }
+        if ($table) {
+            $sql = 'SHOW COLUMNS FROM '.$table;
+            $list = $this->connection->getArray($sql);
+            if ($list) {
+                $out = [];
+                foreach ($list as &$row) {
+                    $out[] = $row['Field'];
+                }
+                unset($row);
 
-        $sql = 'SHOW COLUMNS FROM '.$table;
-        $rs = $this->connection->getArray($sql);
-        if (is_array($rs) && count($rs)) {
-            $out = [];
-            foreach ($rs as $row) {
-                $out[] = $row['Field'];
+                return $out;
             }
-
-            return $out;
         }
     }
 
