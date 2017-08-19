@@ -44,48 +44,6 @@ final class EmptyResultSet extends ResultSet
     /**
      * @ignore
      */
-    private $_errno = 0;
-    private $_error = '';
-
-    /**
-     * @ignore
-     */
-    public function __set($key, $val)
-    {
-        switch ($key) {
-         case 'errno':
-            $this->_errno = $val;
-            break;
-         case 'error':
-         case 'errmsg':
-            $this->_error = $val;
-            break;
-        }
-    }
-
-    /**
-     * @ignore
-     */
-    public function __get($key)
-    {
-        switch ($key) {
-         case 'errno':
-            return $this->_errno;
-         case 'error':
-         case 'errmsg':
-            return $this->_error;
-         case 'EOF':
-            return true;
-         case 'count':
-            return 0;
-         default:
-            return null;
-        }
-    }
-
-    /**
-     * @ignore
-     */
     public function move($idx)
     {
         return false;
