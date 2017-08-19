@@ -1,6 +1,6 @@
 ## CMSMS database connection mechanism
 This is a fork of the cluster of classes used, in [CMS Made Simple](http://cmsmadesimple.org) version 2.2.2, for interacting with the underlying MySQL database for the website.
-Those sources are (reportedly) largely compatible with ADOdb-lite with pear, extended amd transaction plugins. ADOdb-lite was derived from ADOdb around 2004.
+Those sources are (reportedly) largely compatible with ADOdb-lite with pear, extended and transaction plugins. ADOdb-lite was derived from ADOdb around 2004.
 
 The changes here are:
 * uses 'native' functionality in Mysqlnd where possible and helpful
