@@ -1,4 +1,4 @@
-## CMSMS database connection mechanism
+## CMSMS2 database connection mechanism
 This is a fork of the cluster of classes used, in [CMS Made Simple](http://cmsmadesimple.org) version 2.2.2, for interacting with the underlying MySQL database for the website.
 Those sources are (reportedly) largely compatible with ADOdb-lite with pear, extended and transaction plugins. ADOdb-lite was derived from ADOdb around 2004.
 
@@ -10,7 +10,7 @@ The changes here are:
   * it's __only for [DML queries](https://dev.mysql.com/doc/refman/5.7/en/sql-syntax-data-manipulation.html)__. Other types must be (or be manually migrated to) non-parameterized (e.g. SHOW TABLES LIKE ? which was found just once).
   * string-field values are length-constrained (MySQL's max_allowed_packet setting applies). A workaround could be coded if this limit becomes a problem in practice.
 * for a parameterized query with a single parameter, the latter may be provided as a scalar instead of array (this is not ADOdb-compatible)
-* text and blob fields can be sized e.g. X(1024), B(128)
+* text and blob fields can be sized e.g. X(1024), B(128), instead of defaulting to the respective 'LONG' form
 * various small optimisations & several fixes
 * several ADOdb methods reinstated
   * addQ
