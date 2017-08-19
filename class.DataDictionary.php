@@ -252,6 +252,16 @@ abstract class DataDictionary
     /**
      * @ignore
      */
+    protected $sysTimeStamp = 'TIMESTAMP';
+
+    /**
+     * @ignore
+     */
+    protected $sysDate = 'DATE';
+
+    /**
+     * @ignore
+     */
     protected $nameRegex = '\w';
 
     /**
@@ -752,7 +762,8 @@ abstract class DataDictionary
                         break;
                     case '1':
                     case 'TYPE':
-                        $ty = $v; $ftype = $this->ActualType(strtoupper($v));
+                        $ty = $v;
+                        $ftype = $this->ActualType(strtoupper($v));
                         break;
                     case 'SIZE':
                         $dotat = strpos($v, '.');
@@ -803,56 +814,49 @@ abstract class DataDictionary
 
             //--------------------
             // VALIDATE FIELD INFO
-            if (!strlen($fname)) {
+            if (!$fname) {
                 die('failed');
 
                 return false;
             }
 
-            $fid = strtoupper(preg_replace('/^`(.+)`$/', '$1', $fname));
-            $fname = $this->NameQuote($fname);
-
-            if (!strlen($ftype)) {
+            if (!$ftype) {
                 return false;
-            } else {
-                $ftype = strtoupper($ftype);
             }
 
+            $ftype = strtoupper($ftype);
             $ftype = $this->_GetSize($ftype, $ty, $fsize, $fprec);
 
-            if ($ty == 'X' || $ty == 'X2' || $ty == 'B') {
-                $fnotnull = false;
-            } // some blob types do not accept nulls
+            switch ($ty) {
+                case 'X':
+                case 'X2':
+                case 'B':
+                    $fdefault = false; //TEXT and BLOB fields cannot have a DEFAULT value
+                    $fnotnull = false;
+                    if (!$fsize) {
+                        $ftype = 'LONG'.$ftype;
+                    }
+                    break;
+            }
+
+            $fid = strtoupper(preg_replace('/^`(.+)`$/', '$1', $fname));
+            $fname = $this->NameQuote($fname);
 
             if ($fprimary) {
                 $pkey[] = $fname;
             }
 
-            // some databases do not allow blobs to have defaults
-            if ($ty == 'X') {
-                $fdefault = false;
-            }
-
             //--------------------
             // CONSTRUCT FIELD SQL
             if ($fdefts) {
-                $dbtype = $this->_dbType();
-                if (strncasecmp($dbtype, 'mysql', 5) == 0) {
-                    $ftype = 'TIMESTAMP';
-                } else {
-                    $fdefault = $this->connection->sysTimeStamp;
-                }
+                $fdefault = $this->sysTimeStamp;
             } elseif ($fdefdate) {
-                $dbtype = $this->_dbType();
-                if (strncasecmp($dbtype, 'mysql', 5) == 0) {
-                    $ftype = 'TIMESTAMP';
-                } else {
-                    $fdefault = $this->connection->sysDate;
-                }
+                $fdefault = $this->sysDate;
             } elseif ($fdefault !== false && !$fnoquote) {
-                if ($ty == 'C' or $ty == 'X' or
-                    (substr($fdefault, 0, 1) != "'" && !is_numeric($fdefault))) {
-                    if (strlen($fdefault) != 1 && substr($fdefault, 0, 1) == ' ' && substr($fdefault, strlen($fdefault) - 1) == ' ') {
+                if ($ty == 'C' || $ty[0] == 'X' ||
+                    ($fdefault[0] != "'" && !is_numeric($fdefault))) {
+                    $len = strlen($fdefault);
+                    if ($len != 1 && $fdefault[0] == ' ' && $fdefault[$len - 1] == ' ') {
                         $fdefault = trim($fdefault);
                     } elseif (strtolower($fdefault) != 'null') {
                         $fdefault = $this->connection->qStr($fdefault);
@@ -882,7 +886,7 @@ abstract class DataDictionary
      */
     protected function _GetSize($ftype, $ty, $fsize, $fprec)
     {
-        if (strlen($fsize) && $ty != 'X' && $ty != 'B' && strpos($ftype, '(') === false) {
+        if (strlen($fsize) && strpos($ftype, '(') === false) {
             $ftype .= '('.$fsize;
             if (strlen($fprec)) {
                 $ftype .= ','.$fprec;
