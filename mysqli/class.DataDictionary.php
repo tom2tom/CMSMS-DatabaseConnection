@@ -46,19 +46,16 @@ class DataDictionary extends \CMSMS\Database\DataDictionary
 
         $this->dropIndex = 'DROP INDEX %s ON %s';
         $this->renameColumn = 'ALTER TABLE %s CHANGE COLUMN %s %s %s';    // needs column-definition!
+
+        $this->sysTimeStamp = 'TIMESTAMP';
+        $this->sysDate = 'DATE';
     }
 
     protected function ActualType($meta)
     {
         switch ($meta) {
-        case 'C': return 'VARCHAR';
-        case 'XL':return 'LONGTEXT';
-        case 'X': return 'TEXT';
-
+        case 'C':
         case 'C2': return 'VARCHAR';
-        case 'X2': return 'LONGTEXT';
-
-        case 'B': return 'LONGBLOB';
 
         case 'D': return 'DATE';
         case 'DT': return 'DATETIME';
@@ -75,6 +72,12 @@ class DataDictionary extends \CMSMS\Database\DataDictionary
 
         case 'F': return 'DOUBLE';
         case 'N': return 'NUMERIC';
+
+        case 'X':
+        case 'X2': return 'TEXT';
+        case 'XL': return 'LONGTEXT';
+
+        case 'B': return 'BLOB';
         default: return $meta;
         }
     }
@@ -162,7 +165,7 @@ class DataDictionary extends \CMSMS\Database\DataDictionary
                 'LONGBINARY' => 'B',
                 'B' => 'B',
 
-                'YEAR' => 'D', // mysql
+                'YEAR' => 'D',
                 'DATE' => 'D',
                 'D' => 'D',
 
