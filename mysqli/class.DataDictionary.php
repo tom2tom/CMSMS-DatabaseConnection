@@ -49,6 +49,8 @@ class DataDictionary extends \CMSMS\Database\DataDictionary
 
         $this->sysTimeStamp = 'TIMESTAMP';
         $this->sysDate = 'DATE';
+
+        $this->nameQuote = '`';
     }
 
     protected function ActualType($meta)
@@ -231,7 +233,7 @@ class DataDictionary extends \CMSMS\Database\DataDictionary
     {
         $table = trim($table);
         if ($table) {
-            $sql = 'SHOW COLUMNS FROM '.$table;
+            $sql = 'SHOW COLUMNS FROM '.$this->NameQuote($table);
             $list = $this->connection->getArray($sql);
             if ($list) {
                 $out = [];
