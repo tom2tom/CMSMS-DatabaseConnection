@@ -50,6 +50,12 @@ abstract class ResultSet
     /**
      * @ignore
      */
+    protected $_errno = 0;
+    protected $_error = '';
+
+    /**
+     * @ignore
+     */
     protected $_native = ''; //for PHP 5.4+, the MySQL native driver is a php.net compile-time default
 
     /**
@@ -58,6 +64,42 @@ abstract class ResultSet
     public function __destruct()
     {
         $this->close();
+    }
+
+    /**
+     * @ignore
+     */
+    public function __set($key, $val)
+    {
+        switch ($key) {
+         case 'errno':
+            $this->_errno = $val;
+            break;
+         case 'error':
+         case 'errmsg':
+            $this->_error = $val;
+            break;
+        }
+    }
+
+    /**
+     * @ignore
+     */
+    public function __get($key)
+    {
+        switch ($key) {
+         case 'errno':
+            return $this->_errno;
+         case 'error':
+         case 'errmsg':
+            return $this->_error;
+         case 'EOF':
+            return $this->EOF();
+         case 'count':
+            return $this->recordCount();
+         case 'fields':
+            return $this->fields();
+        }
     }
 
     /**
@@ -199,22 +241,5 @@ abstract class ResultSet
         }
 
         return $this->_native;
-    }
-
-    /**
-     * @ignore
-     */
-    public function __get($key)
-    {
-        switch ($key) {
-         case 'EOF':
-            return $this->EOF();
-         case 'count':
-            return $this->recordCount();
-         case 'fields':
-            return $this->fields();
-         default:
-            return null;
-        }
     }
 }
