@@ -315,14 +315,14 @@ abstract class DataDictionary
     abstract protected function MetaType($t, $len = -1, $fieldobj = false);
 
     /**
-     * Return the list of tables in the currently connected database.
+     * Return list of tables in the currently connected database.
      *
      * @return string[]
      */
     abstract public function MetaTables();
 
     /**
-     * Return the list of columns in a table within the currently connected database.
+     * Return list of columns in a table in the currently connected database.
      *
      * @param string $table The table name
      *
@@ -331,7 +331,7 @@ abstract class DataDictionary
     abstract public function MetaColumns($table);
 
     /**
-     * Return a database specific column type given a datadictionary meta column type.
+     * Return the database-specific column-type of a datadictionary meta-column type.
      *
      * @internal
      *
@@ -405,22 +405,13 @@ abstract class DataDictionary
     public function ExecuteSQLArray($sql, $continueOnError = true)
     {
         $rez = 2;
-        $conn = &$this->connection;
         foreach ($sql as $line) {
-            try {
-                $ok = $conn->execute($line);
-                if (!$ok) {
-                    if (!$continueOnError) {
-                        return 0;
-                    }
-                    $rez = 1;
-                }
-            } catch (\Exception $e) {
+            $rs = $this->connection->execute($line);
+            if ($rs->errno > 0) {
                 if (!$continueOnError) {
                     return 0;
                 }
                 $rez = 1;
-                // eat the exception
             }
         }
 
