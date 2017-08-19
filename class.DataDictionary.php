@@ -280,6 +280,11 @@ abstract class DataDictionary
     protected $invalidResizeTypes4 = array('CLOB', 'BLOB', 'TEXT', 'DATE', 'TIME'); // for changetablesql
 
     /**
+     * @ignore
+     */
+    protected $nameQuote = '`'; // string to use to quote identifiers and names
+
+    /**
      * Constructor.
      *
      * @param \CMSMS\Database\Connection $conn
@@ -363,7 +368,7 @@ abstract class DataDictionary
             return $name;
         }
 
-        $quote = $this->connection->nameQuote;
+        $quote = $this->nameQuote;
 
         // if name is of the form `name`, quote it
         if (preg_match('/^`(.+)`$/', $name, $matches)) {
@@ -458,7 +463,7 @@ abstract class DataDictionary
         }
         foreach ($flds as $key => $fld) {
             // some indices can use partial fields, eg. index first 32 chars of "name" with NAME(32)
-            $flds[$key] = $this->NameQuote($fld, $allowBrackets = true);
+            $flds[$key] = $this->NameQuote($fld, true);
         }
 
         return $this->_IndexSQL($this->NameQuote($idxname), $this->TableName($tabname), $flds, $this->_Options($idxoptions));
