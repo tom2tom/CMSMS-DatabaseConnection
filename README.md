@@ -10,7 +10,8 @@ The changes here are:
   * it's __only for [DML queries](https://dev.mysql.com/doc/refman/5.7/en/sql-syntax-data-manipulation.html)__. Other types must be (or be manually migrated to) non-parameterized (e.g. SHOW TABLES LIKE ? which was found just once). A workaround could be coded if this limit becomes a problem in practice.
   * string-field values are length-constrained (MySQL's max_allowed_packet setting applies)
 * for a parameterized query with a single parameter, the latter may be provided as a scalar instead of array (this is not ADOdb-compatible)
-* various small optimisations
+* text and blob fields can be sized e.g. X(1024), B(128)
+* various small optimisations & several fixes
 * several ADOdb methods reinstated
   * addQ
   * getMedian
