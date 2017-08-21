@@ -50,7 +50,7 @@ class PrepResultSet extends \CMSMS\Database\ResultSet
     {
         $this->_mysql = $conn->get_inner_mysql();
         $statmt->store_result(); //buffer the complete result set
-        $this->_nrows = $statmt->num_fields;
+        $this->_nrows = $statmt->num_rows;
         //setup for row-wise data fetching
         $params = [];
         $rs = $statmt->result_metadata();
