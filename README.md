@@ -6,12 +6,13 @@ The changes here are:
 * uses 'native' functionality in Mysqlnd where possible and helpful
 * execute() always returns an object, which may be an empty-result class, in which case with errno and errmsg properties if relevant
 * parameterized queries use the MySQLi prepare/[bind/]execute process instead of emulation (which is scarcely more secure than un-parameterized execution). This means
-  * such queries may be re-used after further bind/execute
+  * such prepared queries may of course be re-executed, with another bind if relevant
   * it's __only for [DML queries](https://dev.mysql.com/doc/refman/5.7/en/sql-syntax-data-manipulation.html)__. Other types must be (or be manually migrated to) non-parameterized (e.g. SHOW TABLES LIKE ? which was found just once).
   * string-field values are length-constrained (MySQL's max_allowed_packet setting applies). A workaround could be coded if this limit becomes a problem in practice.
 * for a parameterized query with a single parameter, the latter may be provided as a scalar instead of array (this is not ADOdb-compatible)
 * text and blob fields can be sized e.g. X(1024), B(128), instead of defaulting to the respective 'LONG' form
 * various small optimisations & several fixes
+* no need for external code to process PHP exceptions
 * several ADOdb methods reinstated
   * addQ
   * getMedian
