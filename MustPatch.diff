@@ -1,0 +1,38 @@
+--- admin/systemmaintenance.php	2017-08-15 22:07:19.516603473 +1000
++++ admin/systemmaintenance.php	2017-08-15 22:09:45.541962203 +1000
+@@ -58,8 +58,8 @@
+ 
+ 
+-$query = "SHOW TABLES LIKE ?";
+-$tablestmp = $db->GetArray($query,array(cms_db_prefix().'%'));
+-$tables = array();
+-$nonseqtables = array();
++$query = "SHOW TABLES LIKE '". CMS_DB_PREFIX ."%'";
++$tablestmp = $db->GetArray($query);
++$tables = [];
++$nonseqtables = [];
+ foreach ($tablestmp as $table) {
+   foreach ($table as $tabeinfo => $tablename) {
+--- modules/Search/search.tools.php	2017-08-17 19:15:48.824482289 +1000
++++ modules/Search/search.tools.php	2017-08-21 11:30:45.281112864 +1000
+@@ -93,7 +93,7 @@
+         $tmp = array_count_values($stemmed_words);
+ 	if( !is_array($tmp) || !count($tmp) ) return;
+-        $words = array();
++        $words = [];
+         foreach( $tmp as $key => $val ) {
+-            $words[] = array('word'=>$key,'count'=>$val);
++            $words[] = [$key, $val];
+         }
+ 
+@@ -121,8 +121,6 @@
+ 
+         $stmt = $db->Prepare('INSERT INTO '.CMS_DB_PREFIX."module_search_index (item_id, word, count) VALUES ($itemid,?,?)");
+-        $stmt->Bind($words);
+-        while( !$stmt->EOF() ) {
+-            $stmt->Execute();
+-            $stmt->MoveNext();
++        foreach ($words as $row) {
++            $stmt->Execute($row);
+         }
+         $db->CommitTrans();

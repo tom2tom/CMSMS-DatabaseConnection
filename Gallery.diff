@@ -1,0 +1,33 @@
+--- modules/Gallery/action.showrandom.php	2017-08-22 17:36:40.293540374 +1000
++++ modules/Gallery/action.showrandom.php	2017-08-22 17:36:25.727703859 +1000
+@@ -120,6 +120,6 @@
+ 						ORDER BY
+ 							RAND()
+-						LIMIT 0,?";
+-	$result = $db->Execute($query, array($galleryinfo['fileid'], (empty($params['dir']) ? '%' : $params['dir'] . "/%"), $number));
++						LIMIT 0," . $number;
++	$result = $db->Execute($query, array($galleryinfo['fileid'], (empty($params['dir']) ? '%' : $params['dir'] . "/%")));
+ 	if ($result && $result->RecordCount() > 0)
+ 	{
+--- modules/Gallery/action.showlatest.php	2017-08-22 17:46:18.830660696 +1000
++++ modules/Gallery/action.showlatest.php	2017-08-22 17:45:20.491327412 +1000
+@@ -110,6 +110,6 @@
+ 						ORDER BY
+ 							filedate DESC
+-						LIMIT 0,?";
+-	$result = $db->Execute($query, array($galleryinfo['fileid'], (empty($params['dir']) ? '%' : $params['dir'] . "/%"), $number));
++						LIMIT 0," . $number;
++	$result = $db->Execute($query, array($galleryinfo['fileid'], (empty($params['dir']) ? '%' : $params['dir'] . "/%")));
+ 	if ($result && $result->RecordCount() > 0)
+ 	{
+--- modules/Gallery/action.showlatestdir.php	2017-08-22 17:34:12.162023785 +1000
++++ modules/Gallery/action.showlatestdir.php	2017-08-22 17:33:52.132870469 +1000
+@@ -137,6 +137,6 @@
+ 							ORDER BY
+ 								RAND()
+-							LIMIT 0,?";
+-		$result = $db->Execute($query, array($latestgalleryid, $number));
++							LIMIT 0," . $number;
++		$result = $db->Execute($query, array($latestgalleryid));
+ 		if ($result && $result->RecordCount() > 0)
+ 		{
