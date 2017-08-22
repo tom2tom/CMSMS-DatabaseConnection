@@ -85,6 +85,7 @@ class Statement
         $this->_sql = $sql;
     }
 
+/* BAD !!
     public function __destruct()
     {
         if ($this->_stmt) {
@@ -96,7 +97,7 @@ class Statement
             }
         }
     }
-
+*/
     /**
      * @ignore
      */
