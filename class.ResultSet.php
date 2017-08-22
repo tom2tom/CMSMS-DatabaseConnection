@@ -61,14 +61,6 @@ abstract class ResultSet
     /**
      * @ignore
      */
-    public function __destruct()
-    {
-        $this->close();
-    }
-
-    /**
-     * @ignore
-     */
     public function __set($key, $val)
     {
         switch ($key) {
