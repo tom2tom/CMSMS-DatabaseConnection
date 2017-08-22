@@ -67,15 +67,8 @@ class PrepResultSet extends \CMSMS\Database\ResultSet
         $this->_pos = ($this->_fields) ? 0 : -1;
     }
 
-    public function __destruct()
-    {
-        $this->_stmt->free_result();
-        $this->_stmt->close();
-    }
-
     public function close()
     {
-        $this->__destruct();
         $this->_stmt = null;
         $this->_fields = [];
         $this->_nrows = 0;
