@@ -325,12 +325,16 @@ abstract class Connection
      */
     public function selectLimit($sql, $nrows = -1, $offset = -1, $valsarr = null)
     {
-        if ($nrows >= 1 || $offset >= 0) {
-            $offset = ($offset >= 0) ? $offset.',' : '';
-            if ($nrows < 1) {
-                $nrows = PHP_INT_MAX;
-            }
-            $sql .= ' LIMIT '.$offset.$nrows;
+        if ($nrows > 0) {
+            $xql = ' LIMIT '.$nrows;
+        } else {
+            $xql = '';
+        }
+        if ($offset > -1) {
+            $xql .= ' OFFSET '.$offset;
+        }
+        if ($xql) {
+            $sql .= $xql;
         }
 
         return $this->execute($sql, $valsarr);
@@ -341,12 +345,18 @@ abstract class Connection
      *
      * @param string $sql     The SQL to execute
      * @param array  $valsarr Value-parameters to fill placeholders (if any) in @sql
+     * @param optional int   $nrows   The number of rows to return, default all (-1)
+     * @param optional int   $offset  0-based starting-offset of rows to return, default -1
      *
      * @return numeric-keyed array of matched results, or empty
      */
-    public function getArray($sql, $valsarr = null)
+    public function getArray($sql, $valsarr = null, $nrows = -1, $offset = -1)
     {
-        $rs = $this->execute($sql, $valsarr);
+        if ($nrows < 0 && $offset < 0) {
+            $rs = $this->execute($sql, $valsarr);
+        } else {
+            $rs = $this->selectLimit($sql, $nrows, $offset, $valsarr);
+        }
         if (!$rs->EOF()) {
             return $rs->getArray();
         }
@@ -375,12 +385,18 @@ abstract class Connection
      * @param array  $valsarr     VAlue-parameters to fill placeholders (if any) in @sql
      * @param bool   $force_array Optionally force each element of the output to be an associative array
      * @param bool   $first2cols  Optionally output only the first 2 columns in an associative array.  Does not work with force_array
+     * @param optional int   $nrows   The number of rows to return, default all (-1)
+     * @param optional int   $offset  0-based starting-offset of rows to return, default -1
      *
      * @return associative array of matched results, or empty
      */
-    public function getAssoc($sql, $valsarr = null, $force_array = false, $first2cols = false)
+    public function getAssoc($sql, $valsarr = null, $force_array = false, $first2cols = false, $nrows = -1, $offset = -1)
     {
-        $rs = $this->execute($sql, $valsarr);
+        if ($nrows < 0 && $offset < 0) {
+            $rs = $this->execute($sql, $valsarr);
+        } else {
+            $rs = $this->selectLimit($sql, $nrows, $offset, $valsarr);
+        }
         if (!$rs->EOF()) {
             return $rs->getAssoc($force_array, $first2cols);
         }
@@ -395,12 +411,18 @@ abstract class Connection
      * @param string $sql     The SQL statement to execute
      * @param array  $valsarr Value-parameters to fill placeholders (if any) in @sql
      * @param bool   $trim    Optionally trim the output results
+     * @param optional int   $nrows   The number of rows to return, default all (-1)
+     * @param optional int   $offset  0-based starting-offset of rows to return, default -1
      *
      * @return array of results, one member per row matched, or empty
      */
-    public function getCol($sql, $valsarr = null, $trim = false)
+    public function getCol($sql, $valsarr = null, $trim = false, $nrows = -1, $offset = -1)
     {
-        $rs = $this->execute($sql, $valsarr);
+        if ($nrows < 0 && $offset < 0) {
+            $rs = $this->execute($sql, $valsarr);
+        } else {
+            $rs = $this->selectLimit($sql, $nrows, $offset, $valsarr);
+        }
         if (!$rs->EOF()) {
             return $rs->getCol($trim);
         }
