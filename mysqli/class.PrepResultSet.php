@@ -36,43 +36,47 @@ namespace CMSMS\Database\mysqli;
 
 class PrepResultSet extends \CMSMS\Database\ResultSet
 {
-    private $_mysql; //mysqli object
     private $_stmt; // mysqli_stmt object
-    private $_fields = [];
-    private $_nrows = 0;
+    private $_fields;
+    private $_nrows;
     private $_pos;
 
     /**
-     * @param conn Connection object
      * @param $statmt mysqli_stmt object
      */
-    public function __construct($conn, \mysqli_stmt $statmt)
+    public function __construct(\mysqli_stmt &$statmt, $buffer = false)
     {
-        $this->_mysql = $conn->get_inner_mysql();
-        $statmt->store_result(); //buffer the complete result set
-        $this->_nrows = $statmt->num_rows;
+        if ($buffer) {
+            $statmt->store_result(); //grab the complete result-set
+            $this->_nrows = $statmt->num_rows;
+//            $this->_pos = ($this->_nrows > 0) ? 0 : -1;
+        } else {
+            $this->_nrows = PHP_INT_MAX;
+//            $this->_pos = -1;
+        }
         //setup for row-wise data fetching
-        $params = [];
+        $fields = [];
+        $data = []; // for pass-by-reference
         $rs = $statmt->result_metadata();
+//        $c = 0; //DEBUG
         while ($field = $rs->fetch_field()) {
             $nm = $field->name;
-            $this->_fields[$nm] = null;
-            $params[] = &$this->_fields[$nm];
+//            $fields[$nm] = $c++; //DEBUG
+            $fields[$nm] = null;
+            $data[] = &$fields[$nm];
         }
-        if ($params) {
-            call_user_func_array([$statmt, 'bind_result'], $params);
-        }
-        $statmt->fetch();
         $this->_stmt = $statmt;
-        $this->_pos = ($this->_fields) ? 0 : -1;
-    }
-
-    public function close()
-    {
-        $this->_stmt = null;
+        if ($data) {
+            $ares = call_user_func_array([$statmt, 'bind_result'], $data);
+            if ($ares) {
+                $this->_fields = $fields;
+//                $this->move(0);
+                $this->_stmt->fetch();
+                $this->_pos = 0;
+                return;
+            }
+        }
         $this->_fields = [];
-        $this->_nrows = 0;
-        $this->_pos = -1;
     }
 
     public function fields($key = null)
@@ -114,12 +118,12 @@ class PrepResultSet extends \CMSMS\Database\ResultSet
         if ($idx == $this->_pos) {
             return true;
         }
-        if ($idx >= 0 && $idx < $this->_nrows) {
-            $this->_stmt->data_seek($idx);
-            $this->_pos = $idx;
-            $this->fetch_row();
+        if ($this->_stmt->data_seek($idx)) { //TODO never succeeds
+            if ($this->_stmt->fetch()) {
+                $this->_pos = $idx;
 
-            return true;
+                return true;
+            }
         }
         $this->_pos = -1;
         $this->_fields = [];
@@ -148,10 +152,16 @@ class PrepResultSet extends \CMSMS\Database\ResultSet
     public function getArray()
     {
         $results = [];
-        $this->moveFirst();
-        while (!$this->EOF()) {
-            $results[] = $this->_fields;
-            $this->moveNext();
+        if (($c = $this->_nrows) > 0) {
+            for ($i = 0; $i < $c; ++$i) {
+                if ($this->move($i)) {
+                    $results[] = $this->_fields;
+                } else {
+                    //TODO handle error
+                    $this->_nrows = $i;
+                    break;
+                }
+            }
         }
 
         return $results;
@@ -160,16 +170,20 @@ class PrepResultSet extends \CMSMS\Database\ResultSet
     public function getAssoc($force_array = false, $first2cols = false)
     {
         $results = [];
-        $c = $this->_stmt->field_count;
-        if ($c > 1 && $this->_nrows) {
+        $c = $this->_nrows;
+        $n = $this->_stmt->field_count;
+        if ($c > 0 && $n > 1) {
             $first = key($this->_fields);
-            $short = ($c == 2 || $first2cols) && !$force_array;
-
-            $this->moveFirst();
-            while (!$this->EOF()) {
-                $row = $this->_fields;
-                $results[trim($row[$first])] = ($short) ? next($row) : array_slice($row, 1);
-                $this->moveNext();
+            $short = ($n == 2 || $first2cols) && !$force_array;
+            for ($i = 0; $i < $c; ++$i) {
+                if ($this->move($i)) {
+                    $row = $this->_fields;
+                    $results[trim($row[$first])] = ($short) ? next($row) : array_slice($row, 1);
+                } else {
+                    //TODO handle error
+                    $this->_nrows = $i;
+                    break;
+                }
             }
         }
 
@@ -179,12 +193,16 @@ class PrepResultSet extends \CMSMS\Database\ResultSet
     public function getCol($trim = false)
     {
         $results = [];
-        if ($this->_nrows) {
+        if (($c = $this->_nrows) > 0) {
             $key = key($this->_fields);
-            $this->moveFirst();
-            while (!$this->EOF()) {
-                $results[] = ($trim) ? trim($this->_fields[$key]) : $this->_fields[$key];
-                $this->moveNext();
+            for ($i = 0; $i < $c; ++$i) {
+                if ($this->move($i)) {
+                    $results[] = ($trim) ? trim($this->_fields[$key]) : $this->_fields[$key];
+                } else {
+                    //TODO handle error
+                    $this->_nrows = $i;
+                    break;
+                 }
             }
         }
 
