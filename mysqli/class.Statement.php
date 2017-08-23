@@ -79,7 +79,7 @@ class Statement
      * @param Connection      $conn The database connection
      * @param optional string $sql  The SQL query, default null
      */
-    public function __construct(Connection $conn, $sql = null)
+    public function __construct(Connection &$conn, $sql = null)
     {
         $this->_conn = $conn;
         $this->_sql = $sql;
@@ -299,14 +299,14 @@ class Statement
             if ($this->isNative()) {
                 $rs = $this->_stmt->get_result(); //mysqli_result or false
                 if ($rs) {
-                    return new ResultSet($this->conn, $rs);
+                    return new ResultSet($rs);
                 } elseif (($n = $this->_stmt->errno) > 0) {
                     return $this->_conn->ErrorSet(\CMSMS\Database\Connection::ERROR_EXECUTE, $n, $this->_stmt->error);
                 } else { //should never happen
                     return new \CMSMS\Database\EmptyResultSet();
                 }
             } else {
-                return new PrepResultSet($this->conn, $this->_stmt);
+                return new PrepResultSet($this->_stmt);
             }
         } else {
             return new \CMSMS\Database\EmptyResultSet();
