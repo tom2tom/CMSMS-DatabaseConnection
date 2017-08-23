@@ -36,19 +36,16 @@ namespace CMSMS\Database\mysqli;
 
 class ResultSet extends \CMSMS\Database\ResultSet
 {
-    private $_mysql; //mysqli object
     private $_result = null; //mysqli_result object (for query which returns data), or boolean
     private $_fields = [];
     private $_nrows = 0;
     private $_pos = -1;
 
     /**
-     * @param $conn Connection object
      * @param $result mysqli_result object (for queries which return data), or boolean
      */
-    public function __construct(Connection $conn, $result)
+    public function __construct($result)
     {
-        $this->_mysql = $conn->get_inner_mysql();
         if ($result instanceof \mysqli_result) {
             $this->_nrows = $result->num_rows;
             $this->_fields = $result->fetch_array(MYSQLI_ASSOC);
@@ -56,7 +53,11 @@ class ResultSet extends \CMSMS\Database\ResultSet
                 $this->_pos = 0;
             }
         }
-        $this->_result = $result;
+        if (is_object($result)) {
+            $this->_result = &$result;
+        } else {
+            $this->_result = $result;
+        }
     }
 
     public function __destruct()
@@ -64,15 +65,6 @@ class ResultSet extends \CMSMS\Database\ResultSet
         if (is_object($this->_result)) {
             $this->_result->free();
         }
-    }
-
-    public function close()
-    {
-        $this->__destruct();
-        $this->_result = null;
-        $this->_fields = [];
-        $this->_nrows = 0;
-        $this->_pos = -1;
     }
 
     public function fields($key = null)
@@ -114,13 +106,11 @@ class ResultSet extends \CMSMS\Database\ResultSet
         if ($idx == $this->_pos) {
             return true;
         }
-        if ($idx >= 0 && $idx < $this->_nrows) {
-            if ($this->_result->data_seek($idx)) {
-                $this->_pos = $idx;
-                $this->fetch_row();
+        if ($this->_result->data_seek($idx)) {
+            $this->_pos = $idx;
+            $this->fetch_row();
 
-                return true;
-            }
+            return true;
         }
         $this->_pos = -1;
         $this->_fields = [];
@@ -149,15 +139,19 @@ class ResultSet extends \CMSMS\Database\ResultSet
     public function getArray()
     {
         if ($this->isNative()) {
-            $this->_result->data_seek(0);
+            $this->move(0);
 
             return $this->_result->fetch_all(MYSQLI_ASSOC);
         } else {
             $results = [];
-            $this->moveFirst();
-            while (!$this->EOF()) {
-                $results[] = $this->_fields;
-                $this->moveNext();
+            if (($c = $this->_nrows) > 0) {
+                for ($i = 0; $i < $c; ++$i) {
+                    if ($this->move($i)) { 
+                        $results[] = $this->_fields;
+                    } else {
+                        break; //TODO handle error
+                    }
+                }
             }
 
             return $results;
@@ -167,33 +161,35 @@ class ResultSet extends \CMSMS\Database\ResultSet
     public function getAssoc($force_array = false, $first2cols = false)
     {
         $results = [];
-        $c = $this->_result->field_count;
-        if ($c > 1 && $this->_nrows) {
+        $n = $this->_result->field_count;
+        $c = $this->_nrows;
+        if ($c > 0 && $n > 1) {
             $first = key($this->_fields);
-            $short = ($c == 2 || $first2cols) && !$force_array;
+            $short = ($n == 2 || $first2cols) && !$force_array;
             if ($this->isNative()) {
-                $this->_result->data_seek(0);
+                $this->move(0);
                 $data = $this->_result->fetch_all(MYSQLI_ASSOC);
-                $n = $this->_nrows;
                 if ($short) {
-                    for ($key = 0; $key < $n; ++$key) {
-                        $row = $data[$key];
+                    for ($i = 0; $i < $c; ++$i) {
+                        $row = $data[$i];
                         $results[trim($row[$first])] = next($row);
-                        unset($data[$key]); //preserve memory footprint
+                        unset($data[$i]); //preserve memory footprint
                     }
                 } else {
-                    for ($key = 0; $key < $n; ++$key) {
-                        $val = $data[$key][$first];
-                        unset($data[$key][$first]);
-                        $results[trim($val)] = $data[$key]; //not duplicated
+                    for ($i = 0; $i < $c; ++$i) {
+                        $val = $data[$i][$first];
+                        unset($data[$i][$first]);
+                        $results[trim($val)] = $data[$i]; //not duplicated
                     }
                 }
             } else {
-                $this->moveFirst();
-                while (!$this->EOF()) {
-                    $row = $this->_fields;
-                    $results[trim($row[$first])] = ($short) ? next($row) : array_slice($row, 1);
-                    $this->moveNext();
+                for ($i = 0; $i < $c; ++$i) {
+                    if ($this->move($i)) {
+                        $row = $this->_fields;
+                        $results[trim($row[$first])] = ($short) ? next($row) : array_slice($row, 1);
+                    } else {
+                        break; //TODO handle error
+                    }
                 }
             }
         }
@@ -204,24 +200,25 @@ class ResultSet extends \CMSMS\Database\ResultSet
     public function getCol($trim = false)
     {
         $results = [];
-        if ($this->_nrows) {
+        if (($c = $this->_nrows) > 0) {
             if ($this->isNative()) {
-                $this->_result->data_seek(0);
+                $this->move(0);
                 $data = $this->_result->fetch_all(MYSQLI_NUM);
                 if (!$trim && function_exists('array_column')) {
                     return array_column($data, 0);
                 }
-                $n = $this->_nrows;
-                for ($key = 0; $key < $n; ++$key) {
-                    $results[] = ($trim) ? trim($data[$key][0]) : $data[$key][0];
-                    unset($data[$key]); //preserve memory footprint
+                for ($i = 0; $i < $c; ++$i) {
+                    $results[] = ($trim) ? trim($data[$i][0]) : $data[$i][0];
+                    unset($data[$i]); //preserve memory footprint
                 }
             } else {
                 $key = key($this->_fields);
-                $this->moveFirst();
-                while (!$this->EOF()) {
-                    $results[] = ($trim) ? trim($this->_fields[$key]) : $this->_fields[$key];
-                    $this->moveNext();
+                for ($i = 0; $i < $c; ++$i) {
+                    if ($this->move($i)) {
+                        $results[] = ($trim) ? trim($this->_fields[$key]) : $this->_fields[$key];
+                    } else {
+                        break; //TODO handle error
+                    }
                 }
             }
         }
