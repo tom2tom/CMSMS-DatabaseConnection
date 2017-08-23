@@ -190,7 +190,7 @@ class Connection extends \CMSMS\Database\Connection
         if ($result) {
             $this->add_debug_query($sql);
 
-            return new ResultSet($this, $result);
+            return new ResultSet($result);
         }
         $this->failTrans();
  
