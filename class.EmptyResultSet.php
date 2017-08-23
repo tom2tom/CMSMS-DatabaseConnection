@@ -93,12 +93,6 @@ final class EmptyResultSet extends ResultSet
     /**
      * @ignore
      */
-    public function close()
-    {
-    }
-    /**
-     * @ignore
-     */
     public function currentRow()
     {
         return false;
