@@ -17,12 +17,16 @@ The changes here are:
   * addQ
   * getMedian
   * resultset::currentRow
-* several redundant/deprecated/unusable methods omitted
+* several redundant/deprecated/unusable/unwanted methods omitted e.g. bulk binding is gone (per ADOdb 5.11+)
 * method names conformed to [current ADOdb practice](http://adodb.org/dokuwiki/doku.php?id=v5:reference:reference_index) i.e. various case-changes 
 * code reformatted per PSR-2
-### Installation
-Together, the various _.php_ files here constitute a drop-in replacement for all files in the folder [[CMSMS root directory]]/lib/classes/Database and below.
 
+ATM, processing of some prepared-statements is not working, cuz mysqli_stmt::data_seek() seems to not work as documented, or at least, not so in a custom class. More investigation to come.
+### Installation
+Together, the various _.php_ files here are intended to constitute a drop-in replacement for all files in the folder [[CMSMS root directory]]/lib/classes/Database and below.
+
+Patch which should be applied _MustPatch.diff_
+Patch which should be applied if the Gallery module is used _Gallery.diff_
 Optionally, you can apply the patch _CMSApp-2.2.2.diff_ to clean up the interface.
 ### Deprecations
 Method _NewDatadictionary($db)_ is merely an alias for _$db->NewDatadictionary()_
