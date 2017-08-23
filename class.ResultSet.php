@@ -164,7 +164,9 @@ abstract class ResultSet
     /**
      * Close the current ResultSet.
      */
-    abstract public function close();
+    public function close()
+    {
+    }
 
     /**
      * Get the current position in the ResultSet data.
@@ -228,6 +230,7 @@ abstract class ResultSet
      */
     protected function isNative()
     {
+return false;
         if ($this->_native === '') {
             $this->_native = function_exists('mysqli_fetch_all');
         }
