@@ -63,17 +63,17 @@ class PrepResultSet extends \CMSMS\Database\ResultSet
 
         if ($this->_nrows > 0) {
             //setup for row-wise data fetching
+            $i = 0;
             $fields = [];
-            $data = []; // for pass-by-reference
             $rs = $statmt->result_metadata();
             while ($field = $rs->fetch_field()) {
                 $nm = $field->name;
-                $fields[$nm] = null;
-                $data[] = &$fields[$nm];
+                $val = 'F'.$i++;
+                $fields[$nm] = &$$val;
             }
-            if ($data) {
+            if ($i) {
                 if (call_user_func_array([$statmt, 'bind_result'], $fields)) {
-                    $statmt->fetch();
+                    $statmt->fetch(); //always populates $fields with references, not actual values
                     $this->_stmt = $statmt;
                     $this->_row = $fields;
                     $this->_pos = 0;
@@ -90,7 +90,12 @@ class PrepResultSet extends \CMSMS\Database\ResultSet
     {
         if ($this->_row) {
             if (empty($key)) {
-                return $this->_row;
+                //dereference the values
+                $row = [];
+                foreach ($this->_row as $key=>$val) {
+                    $row[$key] = $val;
+                }
+                return $row;
             }
             $key = (string) $key;
             if (array_key_exists($key, $this->_row)) {
@@ -182,12 +187,23 @@ class PrepResultSet extends \CMSMS\Database\ResultSet
         $c = $this->_nrows;
         $n = $this->_stmt->field_count;
         if ($c > 0 && $n > 1) {
-            $first = key($this->_row);
             $short = ($n == 2 || $first2cols) && !$force_array;
+			if ($short) {
+                $first = key($this->_row);
+            }
             for ($i = 0; $i < $c; ++$i) {
                 if ($this->move($i)) {
-                    $row = $this->_row;
-                    $results[trim($row[$first])] = ($short) ? next($row) : array_slice($row, 1);
+                    if ($short) {
+                        $results[trim($this->_row[$first])] = next($this->_row);
+                    } else {
+						$first = array_shift($this->_row);
+                        //dereference the values
+						$rest = [];
+                        foreach ($this->_row as $key=>$val) {
+                           $rest[$key] = $val;
+                        }
+                        $results[trim($first)] = $rest;
+                    }
                 } else {
                     //TODO handle error
                     $this->_nrows = $i;
