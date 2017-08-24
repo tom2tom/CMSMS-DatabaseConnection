@@ -37,57 +37,64 @@ namespace CMSMS\Database\mysqli;
 class PrepResultSet extends \CMSMS\Database\ResultSet
 {
     private $_stmt; // mysqli_stmt object
-    private $_fields;
+    private $_row;
     private $_nrows;
     private $_pos;
 
     /**
      * @param $statmt mysqli_stmt object
      */
-    public function __construct(\mysqli_stmt &$statmt, $buffer = false)
+    public function __construct(\mysqli_stmt &$statmt, $buffer = true)
     {
         if ($buffer) {
-            $statmt->store_result(); //grab the complete result-set
-            $this->_nrows = $statmt->num_rows;
-//            $this->_pos = ($this->_nrows > 0) ? 0 : -1;
+            if ($statmt->store_result()) { //grab the complete result-set
+                $this->_nrows = $statmt->num_rows;
+                //TODO ASAP $this->_stmt->clear_result();
+            } elseif ($statmt->errno > 0) {
+                $this->_nrows = 0;
+                //TODO handle error
+            } else {
+                $this->_nrows = 0;
+            }
+            $this->_pos = ($this->_nrows > 0) ? 0 : -1;
         } else {
             $this->_nrows = PHP_INT_MAX;
-//            $this->_pos = -1;
         }
-        //setup for row-wise data fetching
-        $fields = [];
-        $data = []; // for pass-by-reference
-        $rs = $statmt->result_metadata();
-//        $c = 0; //DEBUG
-        while ($field = $rs->fetch_field()) {
-            $nm = $field->name;
-//            $fields[$nm] = $c++; //DEBUG
-            $fields[$nm] = null;
-            $data[] = &$fields[$nm];
-        }
-        $this->_stmt = $statmt;
-        if ($data) {
-            $ares = call_user_func_array([$statmt, 'bind_result'], $data);
-            if ($ares) {
-                $this->_fields = $fields;
-//                $this->move(0);
-                $this->_stmt->fetch();
-                $this->_pos = 0;
-                return;
+
+        if ($this->_nrows > 0) {
+            //setup for row-wise data fetching
+            $fields = [];
+            $data = []; // for pass-by-reference
+            $rs = $statmt->result_metadata();
+            while ($field = $rs->fetch_field()) {
+                $nm = $field->name;
+                $fields[$nm] = null;
+                $data[] = &$fields[$nm];
+            }
+            if ($data) {
+                if (call_user_func_array([$statmt, 'bind_result'], $fields)) {
+                    $statmt->fetch();
+                    $this->_stmt = $statmt;
+                    $this->_row = $fields;
+                    $this->_pos = 0;
+                    return;
+                }
             }
         }
-        $this->_fields = [];
+        $this->_stmt = $statmt;
+        $this->_row = [];
+        $this->_pos = -1;
     }
 
     public function fields($key = null)
     {
-        if ($this->_fields) {
+        if ($this->_row) {
             if (empty($key)) {
-                return $this->_fields;
+                return $this->_row;
             }
             $key = (string) $key;
-            if (array_key_exists($key, $this->_fields)) {
-                return $this->_fields[$key];
+            if (array_key_exists($key, $this->_row)) {
+                return $this->_row[$key];
             }
         }
 
@@ -118,7 +125,8 @@ class PrepResultSet extends \CMSMS\Database\ResultSet
         if ($idx == $this->_pos) {
             return true;
         }
-        if ($this->_stmt->data_seek($idx)) { //TODO never succeeds
+        if ($idx >= 0 && $idx < $this->_nrows) {
+            $this->_stmt->data_seek($idx);
             if ($this->_stmt->fetch()) {
                 $this->_pos = $idx;
 
@@ -126,17 +134,13 @@ class PrepResultSet extends \CMSMS\Database\ResultSet
             }
         }
         $this->_pos = -1;
-        $this->_fields = [];
+        $this->_row = [];
 
         return false;
     }
 
     public function moveFirst()
     {
-        if ($this->_pos == 0) {
-            return true;
-        }
-
         return $this->move(0);
     }
 
@@ -155,7 +159,12 @@ class PrepResultSet extends \CMSMS\Database\ResultSet
         if (($c = $this->_nrows) > 0) {
             for ($i = 0; $i < $c; ++$i) {
                 if ($this->move($i)) {
-                    $results[] = $this->_fields;
+                    //dereference the values
+                    $row = [];
+                    foreach ($this->_row as $key=>$val) {
+                        $row[$key] = $val;
+                    }
+                    $results[] = $row;
                 } else {
                     //TODO handle error
                     $this->_nrows = $i;
@@ -173,11 +182,11 @@ class PrepResultSet extends \CMSMS\Database\ResultSet
         $c = $this->_nrows;
         $n = $this->_stmt->field_count;
         if ($c > 0 && $n > 1) {
-            $first = key($this->_fields);
+            $first = key($this->_row);
             $short = ($n == 2 || $first2cols) && !$force_array;
             for ($i = 0; $i < $c; ++$i) {
                 if ($this->move($i)) {
-                    $row = $this->_fields;
+                    $row = $this->_row;
                     $results[trim($row[$first])] = ($short) ? next($row) : array_slice($row, 1);
                 } else {
                     //TODO handle error
@@ -194,10 +203,10 @@ class PrepResultSet extends \CMSMS\Database\ResultSet
     {
         $results = [];
         if (($c = $this->_nrows) > 0) {
-            $key = key($this->_fields);
+            $key = key($this->_row);
             for ($i = 0; $i < $c; ++$i) {
                 if ($this->move($i)) {
-                    $results[] = ($trim) ? trim($this->_fields[$key]) : $this->_fields[$key];
+                    $results[] = ($trim) ? trim($this->_row[$key]) : $this->_row[$key]; //copy on write
                 } else {
                     //TODO handle error
                     $this->_nrows = $i;
