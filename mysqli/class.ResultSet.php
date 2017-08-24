@@ -37,7 +37,7 @@ namespace CMSMS\Database\mysqli;
 class ResultSet extends \CMSMS\Database\ResultSet
 {
     private $_result = null; //mysqli_result object (for query which returns data), or boolean
-    private $_fields = [];
+    private $_row = [];
     private $_nrows = 0;
     private $_pos = -1;
 
@@ -48,8 +48,8 @@ class ResultSet extends \CMSMS\Database\ResultSet
     {
         if ($result instanceof \mysqli_result) {
             $this->_nrows = $result->num_rows;
-            $this->_fields = $result->fetch_array(MYSQLI_ASSOC);
-            if ($this->_fields) {
+            $this->_row = $result->fetch_array(MYSQLI_ASSOC);
+            if ($this->_row) {
                 $this->_pos = 0;
             }
         }
@@ -69,13 +69,13 @@ class ResultSet extends \CMSMS\Database\ResultSet
 
     public function fields($key = null)
     {
-        if ($this->_fields && !$this->EOF()) {
+        if ($this->_row && !$this->EOF()) {
             if (empty($key)) {
-                return $this->_fields;
+                return $this->_row;
             }
             $key = (string) $key;
-            if (array_key_exists($key, $this->_fields)) {
-                return $this->_fields[$key];
+            if (array_key_exists($key, $this->_row)) {
+                return $this->_row[$key];
             }
         }
 
@@ -113,17 +113,13 @@ class ResultSet extends \CMSMS\Database\ResultSet
             return true;
         }
         $this->_pos = -1;
-        $this->_fields = [];
+        $this->_row = [];
 
         return false;
     }
 
     public function moveFirst()
     {
-        if ($this->_pos == 0) {
-            return true;
-        }
-
         return $this->move(0);
     }
 
@@ -147,7 +143,7 @@ class ResultSet extends \CMSMS\Database\ResultSet
             if (($c = $this->_nrows) > 0) {
                 for ($i = 0; $i < $c; ++$i) {
                     if ($this->move($i)) { 
-                        $results[] = $this->_fields;
+                        $results[] = $this->_row;
                     } else {
                         break; //TODO handle error
                     }
@@ -164,7 +160,7 @@ class ResultSet extends \CMSMS\Database\ResultSet
         $n = $this->_result->field_count;
         $c = $this->_nrows;
         if ($c > 0 && $n > 1) {
-            $first = key($this->_fields);
+            $first = key($this->_row);
             $short = ($n == 2 || $first2cols) && !$force_array;
             if ($this->isNative()) {
                 $this->move(0);
@@ -185,7 +181,7 @@ class ResultSet extends \CMSMS\Database\ResultSet
             } else {
                 for ($i = 0; $i < $c; ++$i) {
                     if ($this->move($i)) {
-                        $row = $this->_fields;
+                        $row = $this->_row;
                         $results[trim($row[$first])] = ($short) ? next($row) : array_slice($row, 1);
                     } else {
                         break; //TODO handle error
@@ -212,10 +208,10 @@ class ResultSet extends \CMSMS\Database\ResultSet
                     unset($data[$i]); //preserve memory footprint
                 }
             } else {
-                $key = key($this->_fields);
+                $key = key($this->_row);
                 for ($i = 0; $i < $c; ++$i) {
                     if ($this->move($i)) {
-                        $results[] = ($trim) ? trim($this->_fields[$key]) : $this->_fields[$key];
+                        $results[] = ($trim) ? trim($this->_row[$key]) : $this->_row[$key];
                     } else {
                         break; //TODO handle error
                     }
@@ -229,7 +225,7 @@ class ResultSet extends \CMSMS\Database\ResultSet
     protected function fetch_row()
     {
         if (!$this->EOF()) {
-            $this->_fields = $this->_result->fetch_array(MYSQLI_ASSOC);
+            $this->_row = $this->_result->fetch_array(MYSQLI_ASSOC);
         }
     }
 }
