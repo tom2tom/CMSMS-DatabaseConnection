@@ -80,6 +80,7 @@ class Connection extends \CMSMS\Database\Connection
                 $this->on_error(parent::ERROR_CONNECT, mysqli_connect_errno(), mysqli_connect_error());
             }
         } else {
+			$this->_mysql = null;
             $this->on_error(parent::ERROR_CONNECT, 98,
                 'Configuration error: mysqli class is not available');
         }
@@ -193,7 +194,7 @@ class Connection extends \CMSMS\Database\Connection
             return new ResultSet($result);
         }
         $this->failTrans();
- 
+
         return $this->ErrorSet(parent::ERROR_EXECUTE,
             $this->_mysql->errno, $this->_mysql->error);
     }
