@@ -230,7 +230,6 @@ abstract class ResultSet
      */
     protected function isNative()
     {
-return false;
         if ($this->_native === '') {
             $this->_native = function_exists('mysqli_fetch_all');
         }
