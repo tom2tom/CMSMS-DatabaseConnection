@@ -187,22 +187,21 @@ class PrepResultSet extends \CMSMS\Database\ResultSet
         $c = $this->_nrows;
         $n = $this->_stmt->field_count;
         if ($c > 0 && $n > 1) {
+            $first = key($this->_row);
             $short = ($n == 2 || $first2cols) && !$force_array;
-			if ($short) {
-                $first = key($this->_row);
-            }
             for ($i = 0; $i < $c; ++$i) {
                 if ($this->move($i)) {
+                    $fv = $this->_row[$first];
                     if ($short) {
-                        $results[trim($this->_row[$first])] = next($this->_row);
+                        $results[trim($fv)] = next($this->_row);
                     } else {
-						$first = array_shift($this->_row);
+                        unset($this->_row[$first]);
                         //dereference the values
-						$rest = [];
+                        $row = [];
                         foreach ($this->_row as $key=>$val) {
-                           $rest[$key] = $val;
+                           $row[$key] = $val;
                         }
-                        $results[trim($first)] = $rest;
+                        $results[trim($fv)] = $row;
                     }
                 } else {
                     //TODO handle error
