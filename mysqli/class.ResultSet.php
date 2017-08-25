@@ -52,8 +52,6 @@ class ResultSet extends \CMSMS\Database\ResultSet
             if ($this->_row) {
                 $this->_pos = 0;
             }
-        }
-        if (is_object($result)) {
             $this->_result = &$result;
         } else {
             $this->_result = $result;
@@ -135,14 +133,14 @@ class ResultSet extends \CMSMS\Database\ResultSet
     public function getArray()
     {
         if ($this->isNative()) {
-            $this->move(0);
+           $this->_result->data_seek(0);
 
-            return $this->_result->fetch_all(MYSQLI_ASSOC);
+           return $this->_result->fetch_all(MYSQLI_ASSOC);
         } else {
             $results = [];
             if (($c = $this->_nrows) > 0) {
                 for ($i = 0; $i < $c; ++$i) {
-                    if ($this->move($i)) { 
+                    if ($this->move($i)) {
                         $results[] = $this->_row;
                     } else {
                         break; //TODO handle error
@@ -163,7 +161,7 @@ class ResultSet extends \CMSMS\Database\ResultSet
             $first = key($this->_row);
             $short = ($n == 2 || $first2cols) && !$force_array;
             if ($this->isNative()) {
-                $this->move(0);
+                $this->_result->data_seek(0);
                 $data = $this->_result->fetch_all(MYSQLI_ASSOC);
                 if ($short) {
                     for ($i = 0; $i < $c; ++$i) {
@@ -198,7 +196,7 @@ class ResultSet extends \CMSMS\Database\ResultSet
         $results = [];
         if (($c = $this->_nrows) > 0) {
             if ($this->isNative()) {
-                $this->move(0);
+                $this->_result->data_seek(0);
                 $data = $this->_result->fetch_all(MYSQLI_NUM);
                 if (!$trim && function_exists('array_column')) {
                     return array_column($data, 0);
