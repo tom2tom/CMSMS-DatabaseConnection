@@ -7,8 +7,9 @@ The changes here are:
 * execute() always returns an object, which may be an empty-result class, in which case with errno and errmsg properties if relevant
 * parameterized queries use the MySQLi prepare/[bind/]execute process instead of emulation (which is scarcely more secure than un-parameterized execution). This means
   * such prepared queries may of course be re-executed, with another bind if relevant
-  * it's __only for [DML queries](https://dev.mysql.com/doc/refman/5.7/en/sql-syntax-data-manipulation.html)__. Other types must be (or be manually migrated to) non-parameterized (e.g. SHOW TABLES LIKE ? which was found just once).
+  * it's __only for [DML queries](https://dev.mysql.com/doc/refman/5.7/en/sql-syntax-data-manipulation.html)__. Other types must be (or be manually migrated to) non-parameterized (e.g. SHOW TABLES LIKE ? or LIMIT ?).
   * string-field values are length-constrained (MySQL's max_allowed_packet setting applies). A workaround could be coded if this limit becomes a problem in practice.
+  * string-field content doesn't need to be escaped
 * for a parameterized query with a single parameter, the latter may be provided as a scalar instead of array (this is not ADOdb-compatible)
 * text and blob fields can be sized e.g. X(1024), B(128), instead of defaulting to the respective 'LONG' form
 * various small optimisations & several fixes
@@ -20,8 +21,6 @@ The changes here are:
 * several redundant/deprecated/unusable/unwanted methods omitted e.g. bulk binding is gone (per ADOdb 5.11+)
 * method names conformed to [current ADOdb practice](http://adodb.org/dokuwiki/doku.php?id=v5:reference:reference_index) i.e. various case-changes 
 * code reformatted per PSR-2
-
-ATM, processing of some prepared-statements is not working, cuz mysqli_stmt::data_seek() seems to not work as documented, or at least, not so in a custom class. More investigation to come.
 ### Installation
 Together, the various _.php_ files here are intended to constitute a drop-in replacement for all files in the folder [[CMSMS root directory]]/lib/classes/Database and below.
 
