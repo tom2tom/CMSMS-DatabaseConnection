@@ -462,15 +462,10 @@ abstract class Connection
      */
     public function getOne($sql, $valsarr = null)
     {
-        if (stripos($sql, 'LIMIT') !== false) {
+        if (stripos($sql, 'LIMIT 1') !== false) {
             $sql .= ' LIMIT 1';
         }
-        $rs = $this->execute($sql, $valsarr);
-        if (!$rs->EOF()) {
-            return reset($rs->fields());
-        }
-
-        return null;
+        return $this->execute($sql, $valsarr)->getOne();
     }
 
     /**

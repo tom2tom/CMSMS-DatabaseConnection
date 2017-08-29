@@ -155,6 +155,13 @@ abstract class ResultSet
     abstract public function getAssoc($force_array = false, $first2cols = false);
 
     /**
+     * Return one value of one field
+     *
+     * @return mixed
+     */
+    abstract public function getOne();
+
+    /**
      * Test if we are at the end of the ResultSet data, and there are no further matches.
      *
      * @return bool
@@ -230,6 +237,7 @@ abstract class ResultSet
      */
     protected function isNative()
     {
+return false; //DEBUG
         if ($this->_native === '') {
             $this->_native = function_exists('mysqli_fetch_all');
         }

@@ -220,6 +220,15 @@ class ResultSet extends \CMSMS\Database\ResultSet
         return $results;
     }
 
+    public function getOne()
+    {
+        if (!$this->EOF()) {
+            return reset($this->_row);
+        }
+
+        return null;
+    }
+
     protected function fetch_row()
     {
         if (!$this->EOF()) {

@@ -86,6 +86,13 @@ final class EmptyResultSet extends ResultSet
     /**
      * @ignore
      */
+    public function getOne()
+    {
+        return null;
+    }
+    /**
+     * @ignore
+     */
     public function EOF()
     {
         return true;
