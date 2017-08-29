@@ -176,7 +176,6 @@ class PrepResultSet extends \CMSMS\Database\ResultSet
                     break;
                 }
             }
-            this->move(0);
         }
 
         return $results;
@@ -212,7 +211,6 @@ class PrepResultSet extends \CMSMS\Database\ResultSet
                     break;
                 }
             }
-            $this->move(0);
         }
 
         return $results;
@@ -232,7 +230,6 @@ class PrepResultSet extends \CMSMS\Database\ResultSet
                     break;
                 }
             }
-            $this->move(0);
         }
 
         return $results;
