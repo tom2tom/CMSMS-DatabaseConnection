@@ -146,6 +146,7 @@ class ResultSet extends \CMSMS\Database\ResultSet
                         break; //TODO handle error
                     }
                 }
+                this->move(0);
             }
 
             return $results;
@@ -186,6 +187,7 @@ class ResultSet extends \CMSMS\Database\ResultSet
                     }
                 }
             }
+            $this->move(0);
         }
 
         return $results;
@@ -215,6 +217,7 @@ class ResultSet extends \CMSMS\Database\ResultSet
                     }
                 }
             }
+            $this->move(0);
         }
 
         return $results;

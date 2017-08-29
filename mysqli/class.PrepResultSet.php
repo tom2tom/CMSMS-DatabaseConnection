@@ -176,6 +176,7 @@ class PrepResultSet extends \CMSMS\Database\ResultSet
                     break;
                 }
             }
+            this->move(0);
         }
 
         return $results;
@@ -193,17 +194,17 @@ class PrepResultSet extends \CMSMS\Database\ResultSet
             }
             for ($i = 0; $i < $c; ++$i) {
                 if ($this->move($i)) {
-                    $fv = trim(reset($this->_row));
+                    $key = trim(reset($this->_row));
                     if ($short) {
-                        $results[$fv] = next($this->_row);
+                        $results[$key] = next($this->_row);
                     } else {
                         unset($this->_row[$first]);
                         //dereference the values
                         $row = [];
-                        foreach ($this->_row as $key=>$val) {
-                           $row[$key] = $val;
+                        foreach ($this->_row as $k=>$val) {
+                           $row[$k] = $val;
                         }
-                        $results[$fv] = $row;
+                        $results[$key] = $row;
                     }
                 } else {
                     //TODO handle error
@@ -211,6 +212,7 @@ class PrepResultSet extends \CMSMS\Database\ResultSet
                     break;
                 }
             }
+            $this->move(0);
         }
 
         return $results;
@@ -228,8 +230,9 @@ class PrepResultSet extends \CMSMS\Database\ResultSet
                     //TODO handle error
                     $this->_nrows = $i;
                     break;
-                 }
+                }
             }
+            $this->move(0);
         }
 
         return $results;
@@ -238,7 +241,7 @@ class PrepResultSet extends \CMSMS\Database\ResultSet
     public function getOne()
     {
         if (!$this->EOF()) {
-			//avoid returning a reference
+            //avoid returning a reference
             reset($this->_row);
             $key = key($this->_row);
             return $this->_row[$key];
