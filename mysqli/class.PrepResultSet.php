@@ -187,13 +187,15 @@ class PrepResultSet extends \CMSMS\Database\ResultSet
         $c = $this->_nrows;
         $n = $this->_stmt->field_count;
         if ($c > 0 && $n > 1) {
-            $first = key($this->_row);
             $short = ($n == 2 || $first2cols) && !$force_array;
+            if (!$short) {
+                $first = key($this->_row);
+            }
             for ($i = 0; $i < $c; ++$i) {
                 if ($this->move($i)) {
-                    $fv = $this->_row[$first];
+                    $fv = trim(reset($this->_row));
                     if ($short) {
-                        $results[trim($fv)] = next($this->_row);
+                        $results[$fv] = next($this->_row);
                     } else {
                         unset($this->_row[$first]);
                         //dereference the values
@@ -201,7 +203,7 @@ class PrepResultSet extends \CMSMS\Database\ResultSet
                         foreach ($this->_row as $key=>$val) {
                            $row[$key] = $val;
                         }
-                        $results[trim($fv)] = $row;
+                        $results[$fv] = $row;
                     }
                 } else {
                     //TODO handle error
@@ -231,6 +233,18 @@ class PrepResultSet extends \CMSMS\Database\ResultSet
         }
 
         return $results;
+    }
+
+    public function getOne()
+    {
+        if (!$this->EOF()) {
+			//avoid returning a reference
+            reset($this->_row);
+            $key = key($this->_row);
+            return $this->_row[$key];
+        }
+
+        return null;
     }
 
     protected function fetch_row()
