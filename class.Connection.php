@@ -476,7 +476,7 @@ abstract class Connection
         } else {
             $rs = $this->selectLimit($sql, 1, $offset, $valsarr);
         }
-        return $rs->->getOne();
+        return $rs->getOne();
     }
 
     /* *
