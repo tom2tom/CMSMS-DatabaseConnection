@@ -372,9 +372,9 @@ abstract class Connection
      *
      * @return array Numeric-keyed matched results, or empty
      */
-    public function getAll($sql, $valsarr = null)
+    public function getAll($sql, $valsarr = null, $nrows = 0, $offset = 0)
     {
-        return $this->getArray($sql, $valsarr);
+        return $this->getArray($sql, $valsarr, $nrows, $offset);
     }
 
     /**
