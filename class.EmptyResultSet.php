@@ -97,13 +97,14 @@ final class EmptyResultSet extends ResultSet
     {
         return true;
     }
-    /**
+    /* *
      * @ignore
      */
-    public function currentRow()
+/*  public function currentRow()
     {
         return false;
     }
+*/
     /**
      * @ignore
      */

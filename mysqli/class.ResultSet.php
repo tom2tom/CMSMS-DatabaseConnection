@@ -80,7 +80,7 @@ class ResultSet extends \CMSMS\Database\ResultSet
         return null;
     }
 
-    public function currentRow()
+/*  public function currentRow()
     {
         if (!$this->EOF()) {
             return $this->_pos;
@@ -88,7 +88,7 @@ class ResultSet extends \CMSMS\Database\ResultSet
 
         return false;
     }
-
+*/
     public function recordCount()
     {
         return $this->_nrows;

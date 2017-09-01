@@ -106,7 +106,7 @@ class PrepResultSet extends \CMSMS\Database\ResultSet
         return null;
     }
 
-    public function currentRow()
+/*  public function currentRow()
     {
         if (!$this->EOF()) {
             return $this->_pos;
@@ -114,7 +114,7 @@ class PrepResultSet extends \CMSMS\Database\ResultSet
 
         return false;
     }
-
+*/
     public function recordCount()
     {
         return $this->_nrows;

@@ -175,12 +175,12 @@ abstract class ResultSet
     {
     }
 
-    /**
+    /* *
      * Get the current position in the ResultSet data.
      *
      * @return int, or false if no current position
      */
-    abstract public function currentRow();
+//    abstract public function currentRow();
 
     /**
      * Return the number of rows in the current ResultSet.
