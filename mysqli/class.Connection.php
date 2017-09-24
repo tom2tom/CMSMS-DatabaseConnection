@@ -80,7 +80,7 @@ class Connection extends \CMSMS\Database\Connection
                 $this->on_error(parent::ERROR_CONNECT, mysqli_connect_errno(), mysqli_connect_error());
             }
         } else {
-			$this->_mysql = null;
+            $this->_mysql = null;
             $this->on_error(parent::ERROR_CONNECT, 98,
                 'Configuration error: mysqli class is not available');
         }
@@ -178,7 +178,7 @@ class Connection extends \CMSMS\Database\Connection
      *
      * @return ResultSet object, or null
      */
-    protected function do_sql($sql)
+    protected function do_sql($sql, $emptyset = false)
     {
         $this->_sql = $sql;
         if ($this->_debug) {
@@ -190,13 +190,20 @@ class Connection extends \CMSMS\Database\Connection
         }
         if ($result) {
             $this->add_debug_query($sql);
+            $this->errno = 0;
+            $this->error = '';
 
             return new ResultSet($result);
         }
         $this->failTrans();
 
-        return $this->ErrorSet(parent::ERROR_EXECUTE,
-            $this->_mysql->errno, $this->_mysql->error);
+        $this->errno = $this->_mysql->errno;
+        $this->error = $this->_mysql->error;
+        if ($emptyset) { 
+            return $this->ErrorSet(parent::ERROR_EXECUTE, $this->errno, $this->error);
+        }
+
+        return null;
     }
 
     public function prepare($sql)
@@ -211,7 +218,7 @@ class Connection extends \CMSMS\Database\Connection
         return false;
     }
 
-    public function execute($sql, $valsarr = null)
+    public function execute($sql, $valsarr = null, $emptyset = false)
     {
         if ($valsarr) {
             if (!is_array($valsarr)) {
@@ -220,16 +227,21 @@ class Connection extends \CMSMS\Database\Connection
             if (is_string($sql)) {
                 $stmt = new Statement($this, $sql);
 
-                return $stmt->execute($valsarr);
+                return $stmt->execute($valsarr, $emptyset);
             } elseif (is_object($sql) && $sql instanceof CMSMS\Database\mysqli\Statement) {
-                return $sql->execute($valsarr);
-            }
+                return $sql->execute($valsarr, $emptyset);
+            } else {
+                $this->errno = 1;
+                $this->error = 'Invalid bind-parameter(s) supplied to execute method';
+				if ($emptyset) {
+                    return $this->ErrorSet(parent::ERROR_PARAM, $this->errno, $this->error);
+                }
 
-            return $this->ErrorSet(parent::ERROR_PARAM, -1,
-              'Invalid bind-parameter(s) supplied to execute method');
+                return null;
+            }
         }
 
-        return $this->do_sql($sql);
+        return $this->do_sql($sql, $emptyset);
     }
 
     public function beginTrans()
