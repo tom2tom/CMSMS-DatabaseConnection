@@ -411,8 +411,8 @@ abstract class DataDictionary
     {
         $rez = 2;
         foreach ($sql as $line) {
-            $rs = $this->connection->execute($line);
-            if ($rs->errno > 0) {
+            $this->connection->execute($line);
+            if ($this->connection->errno > 0) {
                 if (!$continueOnError) {
                     return 0;
                 }
