@@ -85,6 +85,16 @@ abstract class Connection
     const ERROR_PARAM = 'PARAMETER';
 
     /**
+     * @param int $errno The error number from the last operation
+     */
+    public $errno = 0;
+
+    /**
+     * @param string $error The error descriptor from the last operation
+     */
+    public $error = '';
+
+    /**
      * @ignore
      * bool Whether debug mode is enabled
      */
@@ -140,7 +150,7 @@ abstract class Connection
         if ($this->_debug) {
             $this->_debug_cb = 'debug_buffer';
         }
-        $this->_errorhandler= [$this, 'on_error'];
+        $this->_errorhandler = [$this, 'on_error'];
     }
 
     /**
@@ -308,22 +318,26 @@ abstract class Connection
      *
      * @param string or Statement object $sql
      * @param optional array             $valsarr Value-parameters to fill placeholders (if any) in @sql
+     * @param optional boolean           $emptyset whether to return a EmptyResultSet or related object
+     *  when a SELECT retrieves nothing or other command fails, default false
      *
      * @return <namespace>ResultSet or a subclass of that
      */
-    abstract public function execute($sql, $valsarr = null);
+    abstract public function execute($sql, $valsarr = null, $emptyset = false);
 
     /**
      * Execute an SQL command, to retrieve (at most) @nrows records.
      *
-     * @param string         $sql     The SQL to execute
-     * @param optional int   $nrows   The number of rows to return, default all (0)
-     * @param optional int   $offset  0-based starting-offset of rows to return, default 0
-     * @param optional array $valsarr Value-parameters to fill placeholders (if any) in @sql
+     * @param string           $sql     The SQL to execute
+     * @param optional int     $nrows   The number of rows to return, default all (0)
+     * @param optional int     $offset  0-based starting-offset of rows to return, default 0
+     * @param optional array   $valsarr Value-parameters to fill placeholders (if any) in @sql
+     * @param optional boolean $emptyset whether to return a EmptyResultSet or related object
+     *  when a SELECT retrieves nothing or other command fails, default false
      *
      * @return mixed <namespace>ResultSet or a subclass
      */
-    public function selectLimit($sql, $nrows = 0, $offset = 0, $valsarr = null)
+    public function selectLimit($sql, $nrows = 0, $offset = 0, $valsarr = null, $emptyset = false)
     {
         if ($nrows > 0) {
             $xql = ' LIMIT '.$nrows;
@@ -337,7 +351,7 @@ abstract class Connection
             $sql .= $xql;
         }
 
-        return $this->execute($sql, $valsarr);
+        return $this->execute($sql, $valsarr, $emptyset);
     }
 
     /**
@@ -357,7 +371,7 @@ abstract class Connection
         } else {
             $rs = $this->selectLimit($sql, $nrows, $offset, $valsarr);
         }
-        if (!$rs->EOF()) {
+        if ($rs) {
             return $rs->getArray();
         }
 
@@ -397,7 +411,7 @@ abstract class Connection
         } else {
             $rs = $this->selectLimit($sql, $nrows, $offset, $valsarr);
         }
-        if (!$rs->EOF()) {
+        if ($rs) {
             return $rs->getAssoc($force_array, $first2cols);
         }
 
@@ -423,7 +437,7 @@ abstract class Connection
         } else {
             $rs = $this->selectLimit($sql, $nrows, $offset, $valsarr);
         }
-        if (!$rs->EOF()) {
+        if ($rs) {
             return $rs->getCol($trim);
         }
 
@@ -443,14 +457,14 @@ abstract class Connection
     public function getRow($sql, $valsarr = null, $offset = 0)
     {
         if ($offset < 1) {
-            if (stripos($sql, 'LIMIT') !== false) {
+            if (stripos($sql, 'LIMIT') === false) {
                 $sql .= ' LIMIT 1';
             }
-           $rs = $this->execute($sql, $valsarr);
+            $rs = $this->execute($sql, $valsarr);
         } else {
             $rs = $this->selectLimit($sql, 1, $offset, $valsarr);
         }
-        if (!$rs->EOF()) {
+        if ($rs) {
             return $rs->fields();
         }
 
@@ -469,14 +483,18 @@ abstract class Connection
     public function getOne($sql, $valsarr = null, $offset = 0)
     {
         if ($offset < 1) {
-            if (stripos($sql, 'LIMIT') !== false) {
+            if (stripos($sql, 'LIMIT') === false) {
                 $sql .= ' LIMIT 1';
             }
             $rs = $this->execute($sql, $valsarr);
         } else {
             $rs = $this->selectLimit($sql, 1, $offset, $valsarr);
         }
-        return $rs->getOne();
+        if ($rs) {
+            return $rs->getOne();
+        }
+
+        return null;
     }
 
     /* *
@@ -495,7 +513,7 @@ abstract class Connection
             return null;
         }
         $rs = $this->execute("SELECT COUNT(*) AS num FROM $table $where");
-        if (!$rs->EOF()) {
+        if ($rs) {
             $mid = (int) $rs->fields('num') / 2;
             $rs = $this->selectLimit("SELECT $column FROM $table $where ORDER BY $column", 1, $mid);
 
