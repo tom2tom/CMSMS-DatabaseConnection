@@ -197,13 +197,14 @@ class Connection extends \CMSMS\Database\Connection
         }
         $this->failTrans();
 
-        $this->errno = $this->_mysql->errno;
-        $this->error = $this->_mysql->error;
-        if ($emptyset) { 
-            return $this->ErrorSet(parent::ERROR_EXECUTE, $this->errno, $this->error);
+        $errno = $this->_mysql->errno;
+        $error = $this->_mysql->error;
+        if ($emptyset) {
+            return $this->ErrorSet(parent::ERROR_EXECUTE, $errno, $error);
+        } else {
+            $this->OnError(parent::ERROR_EXECUTE, $errno, $error);
+            return null;
         }
-
-        return null;
     }
 
     public function prepare($sql)
@@ -231,13 +232,14 @@ class Connection extends \CMSMS\Database\Connection
             } elseif (is_object($sql) && $sql instanceof CMSMS\Database\mysqli\Statement) {
                 return $sql->execute($valsarr, $emptyset);
             } else {
-                $this->errno = 1;
-                $this->error = 'Invalid bind-parameter(s) supplied to execute method';
-				if ($emptyset) {
-                    return $this->ErrorSet(parent::ERROR_PARAM, $this->errno, $this->error);
+                $errno = 4;
+                $error = 'Invalid bind-parameter(s) supplied to execute method';
+                if ($emptyset) {
+                    return $this->ErrorSet(parent::ERROR_PARAM, $errno, $error);
+                } else {
+                    $this->OnError(parent::ERROR_PARAM, $errno, $error);
+                    return null;
                 }
-
-                return null;
             }
         }
 

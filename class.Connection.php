@@ -796,6 +796,8 @@ abstract class Connection
      */
     public function OnError($errtype, $error_number, $error_message)
     {
+        $this->errno = $error_number;
+        $this->error = $error_message;
         if ($this->_errorhandler && is_callable($this->_errorhandler)) {
             call_user_func($this->_errorhandler, $errtype, $error_number, $error_message);
         }
