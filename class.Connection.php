@@ -540,7 +540,7 @@ abstract class Connection
      * This method will either do a rollback or a commit depending upon if errors
      * have been detected.
      */
-    abstract public function completeTrans();
+    abstract public function completeTrans($autoComplete = true);
 
     /**
      * Commit a simple transaction.
