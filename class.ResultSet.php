@@ -202,6 +202,13 @@ abstract class ResultSet
     }
 
     /**
+     * Return the number of columns in the current ResultSet.
+     *
+     * @return int
+     */
+	abstract  public function fieldCount();
+
+    /**
      * Return all the fields, or a single field, of the current row of the ResultSet.
      *
      * @param string $field An optional field name, if not specified, the entire row will be returned

@@ -41,7 +41,9 @@ namespace CMSMS\Database;
  */
 final class EmptyResultSet extends ResultSet
 {
-    /**
+	public $numfields = 0; //TODO real no. of fields for the command!
+
+	/**
      * @ignore
      */
     public function move($idx)
@@ -88,7 +90,6 @@ final class EmptyResultSet extends ResultSet
      */
     public function getOne()
     {
-        return null;
     }
     /**
      * @ignore
@@ -115,9 +116,15 @@ final class EmptyResultSet extends ResultSet
     /**
      * @ignore
      */
+    public function fieldCount()
+    {
+        return $this->numfields;
+    }
+    /**
+     * @ignore
+     */
     public function fields($field = null)
     {
-        return null;
     }
     /**
      * @ignore
