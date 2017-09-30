@@ -124,6 +124,16 @@ class Statement
         return $this->_native;
     }
 
+    protected function processerror ($type, $errno, $error, $emptyset = false)
+    {
+        if ($emptyset) {
+            $this->errset = $this->_conn->ErrorSet($type, $errno, $error);
+        } else {
+            $this->_conn->OnError($type, $errno, $error);
+            $this->errset = null;
+       }
+    }
+
     /**
      * Prepare the query.
      *
@@ -131,18 +141,20 @@ class Statement
      *
      * @return bool indicating success
      */
-    public function prepare($sql = null)
+    public function prepare($sql = null, $emptyset = false)
     {
         $mysql = $this->_conn->get_inner_mysql();
         if (!$mysql || !$this->_conn->isConnected()) {
-            $this->errset = $this->_conn->ErrorSet(\CMSMS\Database\Connection::ERROR_CONNECT,
-                99, 'Attempt to create prepared statement when database is not connected');
+            $errno = 5;
+            $error = 'Attempt to create prepared statement when database is not connected';
+            $this->processerror(\CMSMS\Database\Connection::ERROR_CONNECT, $errno, $error, $emptyset);
             $this->_prep = false;
 
             return false;
         } elseif (!($sql || $this->_sql)) {
-            $this->errset = $this->_conn->ErrorSet(\CMSMS\Database\Connection::ERROR_PARAM,
-                -1, 'No SQL to prepare');
+            $errno = 1;
+            $error = 'No SQL to prepare';
+            $this->processerror(\CMSMS\Database\Connection::ERROR_PARAM, $errno, $error, $emptyset);
             $this->_prep = false;
 
             return false;
@@ -156,13 +168,16 @@ class Statement
         $this->_stmt = $mysql->stmt_init();
         $this->_prep = $this->_stmt->prepare((string) $sql);
         if ($this->_prep) {
+            $this->_conn->errno = 0;
+            $this->_conn->error = '';
             $this->errset = null;
 
             return true;
         }
 
-        $this->errset = $this->_conn->ErrorSet(\CMSMS\Database\Connection::ERROR_PREPARE,
-            $this->_stmt->errno, $this->_stmt->error);
+        $errno = $this->_stmt->errno;
+        $error = $this->_stmt->error;
+        $this->processerror (\CMSMS\Database\Connection::ERROR_PREPARE, $errno, $error, $emptyset);
         $this->_stmt = null;
 
         return false;
@@ -173,19 +188,20 @@ class Statement
      *
      * @return bool indicating success
      */
-    public function bind($valsarr)
+    public function bind($valsarr, $emptyset = false)
     {
         if (!$this->_stmt) {
             if ($this->_sql) {
-                $this->prepare($this->_sql);
+                $this->prepare($this->_sql, $emptyset);
                 if (!$this->_prep) {
                     $this->_bound = false;
 
                     return false;
                 }
             } else {
-                $this->errset = $this->_conn->ErrorSet(\CMSMS\Database\Connection::ERROR_PARAM,
-                   -1, 'No SQL to bind to');
+                $errno = 1;
+                $error = 'No SQL to bind to';
+                $this->processerror(\CMSMS\Database\Connection::ERROR_PARAM, $errno, $error, $emptyset);
                 $this->_bound = false;
 
                 return false;
@@ -235,14 +251,17 @@ class Statement
         }
 
         if (call_user_func_array([$this->_stmt, 'bind_param'], $bound)) {
+            $this->_conn->errno = 0;
+            $this->_conn->error = '';
             $this->errset = null;
             $this->_bound = true;
 
             return true;
         }
 
-        $this->errset = $this->_conn->ErrorSet(\CMSMS\Database\Connection::ERROR_PARAM,
-            -1, 'Failed to bind paramers to prepared statement');
+        $errno = 6;
+        $error = 'Failed to bind paramers to prepared statement';
+        $this->processerror(\CMSMS\Database\Connection::ERROR_PARAM, $errno, $error, $emptyset);
         $this->_bound = false;
 
         return false;
@@ -253,15 +272,13 @@ class Statement
      *
      * @return object: ResultSet or EmptyResultSet or PrepResultSet
      */
-    public function execute($valsarr, $emptyset)
+    public function execute($valsarr, $emptyset = false)
     {
         if (!$this->_stmt) {
             if ($this->_sql) {
-                $this->prepare($this->_sql);
+                $this->prepare($this->_sql, $emptyset);
                 if (!$this->_prep) {
                     $this->_bound = false;
-	                $this->_conn->errno = $this->errset->errno;
-					$this->_conn->error = $this->errset->error;
                     if ($emptyset) {
                         return $this->errset;
                     }
@@ -269,11 +286,11 @@ class Statement
                     return null;
                 }
             } else {
-                $this->_conn->errno = 1;
-				$this->_conn->error = 'No SQL to prepare';
-				if ($emptyset) {
-                    return $this->_conn->ErrorSet(\CMSMS\Database\Connection::ERROR_PARAM,
-                       $this->_conn->errno, $this->_conn->error);
+                $errno = 1;
+                $error = 'No SQL to prepare';
+                $this->processerror(\CMSMS\Database\Connection::ERROR_PARAM, $errno, $error, $emptyset);
+                if ($emptyset) {
+                    return $this->errset;
                 }
 
                 return null;
@@ -286,10 +303,8 @@ class Statement
                 $valsarr = $valsarr[0];
             }
             if ($pc == count($valsarr)) {
-                $this->bind($valsarr);
+                $this->bind($valsarr, $emptyset);
                 if (!$this->_bound) {
-	                $this->_conn->errno = $this->errset->errno;
-                    $this->_conn->error = $this->errset->error;
                     if ($emptyset) {
                         return $this->errset;
                     }
@@ -297,32 +312,32 @@ class Statement
                     return null;
                 }
             } else {
-                $this->_conn->errno = 2;
-				$this->_conn->error = 'Incorrect number of bound parameters - should be '.$pc;
-				if ($emptyset) {
-                    return $this->_conn->ErrorSet(\CMSMS\Database\Connection::ERROR_PARAM,
-                        $this->_conn->errno, $this->_conn->error);
-            	}
+                $errno = 2;
+                $error = 'Incorrect number of bound parameters - should be '.$pc;
+                $this->processerror(\CMSMS\Database\Connection::ERROR_PARAM, $errno, $error, $emptyset);
+                if ($emptyset) {
+                    return $this->errset;
+                }
 
                 return null;
             }
         } elseif ($pc > 0 && !$this->_bound) {
-            $this->_conn->errno = 3;
-            $this->_conn->error = 'No bound parameters, and no arguments passed';
+            $errno = 3;
+            $error = 'No bound parameters, and no arguments passed';
+            $this->processerror(\CMSMS\Database\Connection::ERROR_PARAM, $errno, $error, $emptyset);
             if ($emptyset) {
-                return $this->_conn->ErrorSet(\CMSMS\Database\Connection::ERROR_PARAM, -1,
-                    $this->_conn->errno, $this->_conn->error);
+                return $this->errset;
             }
 
             return null;
         }
 
         if (!$this->_stmt->execute()) {
-            $this->_conn->errno = $this->_stmt->errno;
-            $this->_conn->error = $this->_stmt->error;
+            $errno = $this->_stmt->errno;
+            $error = $this->_stmt->error;
+            $this->processerror(\CMSMS\Database\Connection::ERROR_EXECUTE, $errno, $error, $emptyset);
             if ($emptyset) {
-                return $this->_conn->ErrorSet(\CMSMS\Database\Connection::ERROR_EXECUTE,
-                    $this->_conn->errno, $this->_conn->error);
+                return $this->errset;
             }
 
             return null;
@@ -337,17 +352,17 @@ class Statement
 
                     return new ResultSet($rs);
                 } elseif (($n = $this->_stmt->errno) > 0) {
-                    $this->_conn->errno = $n;
-                    $this->_conn->error = $this->_stmt->error;
+                    $error = $this->_stmt->error;
+                    $this->processerror(\CMSMS\Database\Connection::ERROR_EXECUTE, $n, $error, $emptyset);
                     if ($emptyset) {
-                        return $this->_conn->ErrorSet(\CMSMS\Database\Connection::ERROR_EXECUTE,
-                            $this->_conn->errno, $this->_conn->error);
+                        return $this->errset;
                     }
 
                     return null;
                 } else { //should never happen
-                    $this->_conn->errno = 4;
-                    $this->_conn->error = 'No result (reason unknown)';
+                    $errno = 99;
+                    $error = 'No result (reason unknown)';
+                    $this->processerror(\CMSMS\Database\Connection::ERROR_EXECUTE, $errno, $error, $emptyset);
                     if ($emptyset) {
                         return new \CMSMS\Database\EmptyResultSet();
                     }
@@ -360,7 +375,7 @@ class Statement
 
                 return new PrepResultSet($this->_stmt);
             }
-        } else {
+        } else { //INSERT,UPDATE,DELETE etc
             $this->_conn->errno = 0;
             $this->_conn->error = '';
             if ($emptyset) {
