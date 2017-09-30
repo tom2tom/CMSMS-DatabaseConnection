@@ -106,6 +106,11 @@ class PrepResultSet extends \CMSMS\Database\ResultSet
         return null;
     }
 
+    public function fieldCount()
+    {
+        return $this->_stmt->field_count;
+    }
+
 /*  public function currentRow()
     {
         if (!$this->EOF()) {
