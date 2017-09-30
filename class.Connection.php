@@ -632,7 +632,7 @@ abstract class Connection
         }
 
         if ($time > 0) {
-            return date("'Y-m-d H:i:s'", $time);
+            return date('Y-m-d H:i:s', $time);
         }
         return 'NULL';
     }
