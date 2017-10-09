@@ -165,8 +165,7 @@ class Connection extends \CMSMS\Database\Connection
     {
         // no error checking for this stuff
         // and no return data
-        $_t = $this->_mysql->multi_query($sql);
-        if ($_t) {
+        if ($this->_mysql->multi_query($sql)) {
             do {
                 $res = $this->_mysql->store_result();
             } while ($this->_mysql->more_results() && $this->_mysql->next_result());
@@ -189,7 +188,9 @@ class Connection extends \CMSMS\Database\Connection
             $result = $this->_mysql->query($sql);
         }
         if ($result) {
-            $this->add_debug_query($sql);
+            if ($this->_debug) {
+                $this->add_debug_query($sql);
+            }
             $this->errno = 0;
             $this->error = '';
 
@@ -252,7 +253,8 @@ class Connection extends \CMSMS\Database\Connection
             // allow nesting in this case.
             ++$this->_in_transaction;
             $this->_transaction_failed = false;
-            $this->do_sql('BEGIN');
+            $this->_mysql->query('START TRANSACTION');
+//          $this->_mysql->begin_transaction(); PHP5.5+
         }
 
         return true;
@@ -287,10 +289,14 @@ class Connection extends \CMSMS\Database\Connection
             return false;
         }
 
-        --$this->_in_transaction;
-        $this->do_sql('ROLLBACK');
+        if ($this->_mysql->rollback()) {
+            --$this->_in_transaction;
 
-        return true;
+            return true;
+        }
+
+        $this->OnError(parent::ERROR_TRANSACTION, $this->_mysql->errno, $this->_mysql->error);
+        return false;
     }
 
     public function commitTrans($ok = true)
@@ -305,10 +311,14 @@ class Connection extends \CMSMS\Database\Connection
             return false;
         }
 
-        --$this->_in_transaction;
-        $this->do_sql('COMMIT');
+        if ($this->_mysql->commit()) {
+            --$this->_in_transaction;
 
-        return true;
+            return true;
+        }
+
+        $this->OnError(parent::ERROR_TRANSACTION, $this->_mysql->errno, $this->_mysql->error);
+        return false;
     }
 
     public function completeTrans($autoComplete = true)
@@ -345,29 +355,42 @@ class Connection extends \CMSMS\Database\Connection
         return false;
     }
 
+    //TODO CHECK thread-safety
     public function genId($seqname)
     {
-        $this->do_sql("UPDATE $seqname SET id=id+1");
+        if ($this->_mysql->multi_query(
+     "BEGIN; SELECT id FROM $seqname FOR UPDATE; UPDATE $seqname SET id = id + 1; COMMIT;"
+        )) {
+            do {
+                $rs = $this->_mysql->store_result(); //NOT use_result()
+                if ($rs) {
+                     $data = $rs->fetch_array(MYSQLI_NUM);
+                     $rs->free();
+                }
+            } while (/*$this->_mysql->more_results() && */$this->_mysql->next_result());
 
-        return (int) $this->getOne("SELECT id FROM $seqname");
+            return $data[0] + 1;
+        } elseif ($this->_debug) {
+            $this->add_debug_query("genId($seqname)");
+        }
     }
 
     public function createSequence($seqname, $startID = 0)
     {
-        $res = $this->do_sql("CREATE TABLE $seqname (id INT NOT NULL) ENGINE MyISAM");
-        if ($res) {
+        $rs = $this->do_sql("CREATE TABLE $seqname (id INT NOT NULL) ENGINE InnoDB");
+        if ($rs) {
             $v = (int) $startID;
-            $res = $this->do_sql("INSERT INTO $seqname (id) values ($v)");
+            $rs = $this->do_sql("INSERT INTO $seqname VALUES ($v)");
         }
 
-        return $res !== false;
+        return $rs !== false;
     }
 
     public function dropSequence($seqname)
     {
-        $res = $this->do_sql("DROP TABLE $seqname");
+        $rs = $this->do_sql("DROP TABLE $seqname");
 
-        return $res !== false;
+        return $rs !== false;
     }
 
     public function NewDataDictionary()
