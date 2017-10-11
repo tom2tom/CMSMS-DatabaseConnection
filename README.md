@@ -11,7 +11,6 @@ The changes here are:
 * method names conformed to [current ADOdb practice](http://adodb.org/dokuwiki/doku.php?id=v5:reference:reference_index) i.e. various case-changes 
 * code reformatted per PSR-2
 ### Incompatibilities
-* execute() always returns an object, which may be an empty-result class, in which case with errno and errmsg properties, if relevant
 * parameterized queries
   * __must be [DML queries](https://dev.mysql.com/doc/refman/5.7/en/sql-syntax-data-manipulation.html)__. Other types must be (or be manually migrated to) non-parameterized (e.g. SHOW TABLES LIKE ? or LIMIT ?).
   * string-field values are length-constrained (MySQL's max_allowed_packet setting applies). A workaround could be coded if this limit becomes a problem in practice.
