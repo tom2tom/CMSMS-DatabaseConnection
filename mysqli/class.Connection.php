@@ -364,15 +364,17 @@ class Connection extends \CMSMS\Database\Connection
             do {
                 $rs = $this->_mysql->store_result(); //NOT use_result()
                 if ($rs) {
-                     $data = $rs->fetch_array(MYSQLI_NUM);
-                     $rs->free();
+                    $data = $rs->fetch_array(MYSQLI_NUM);
+                    $rs->free();
                 }
-            } while (/*$this->_mysql->more_results() && */$this->_mysql->next_result());
+            } while ($this->_mysql->next_result());
 
             return $data[0] + 1;
         } elseif ($this->_debug) {
             $this->add_debug_query("genId($seqname)");
         }
+
+        return -1;
     }
 
     public function createSequence($seqname, $startID = 0)
