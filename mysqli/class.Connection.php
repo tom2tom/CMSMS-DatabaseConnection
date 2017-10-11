@@ -177,7 +177,7 @@ class Connection extends \CMSMS\Database\Connection
      *
      * @return ResultSet object, or null
      */
-    protected function do_sql($sql, $emptyset = false)
+    protected function do_sql($sql)
     {
         $this->_sql = $sql;
         if ($this->_debug) {
@@ -200,12 +200,9 @@ class Connection extends \CMSMS\Database\Connection
 
         $errno = $this->_mysql->errno;
         $error = $this->_mysql->error;
-        if ($emptyset) {
-            return $this->ErrorSet(parent::ERROR_EXECUTE, $errno, $error);
-        } else {
-            $this->OnError(parent::ERROR_EXECUTE, $errno, $error);
-            return null;
-        }
+        $this->OnError(parent::ERROR_EXECUTE, $errno, $error);
+
+        return null;
     }
 
     public function prepare($sql)
@@ -220,7 +217,7 @@ class Connection extends \CMSMS\Database\Connection
         return false;
     }
 
-    public function execute($sql, $valsarr = null, $emptyset = false)
+    public function execute($sql, $valsarr = null)
     {
         if ($valsarr) {
             if (!is_array($valsarr)) {
@@ -229,22 +226,19 @@ class Connection extends \CMSMS\Database\Connection
             if (is_string($sql)) {
                 $stmt = new Statement($this, $sql);
 
-                return $stmt->execute($valsarr, $emptyset);
+                return $stmt->execute($valsarr);
             } elseif (is_object($sql) && $sql instanceof CMSMS\Database\mysqli\Statement) {
-                return $sql->execute($valsarr, $emptyset);
+                return $sql->execute($valsarr);
             } else {
                 $errno = 4;
                 $error = 'Invalid bind-parameter(s) supplied to execute method';
-                if ($emptyset) {
-                    return $this->ErrorSet(parent::ERROR_PARAM, $errno, $error);
-                } else {
-                    $this->OnError(parent::ERROR_PARAM, $errno, $error);
-                    return null;
-                }
+                $this->OnError(parent::ERROR_PARAM, $errno, $error);
+
+                return null;
             }
         }
 
-        return $this->do_sql($sql, $emptyset);
+        return $this->do_sql($sql);
     }
 
     public function beginTrans()

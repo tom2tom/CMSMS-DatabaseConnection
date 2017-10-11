@@ -318,12 +318,11 @@ abstract class Connection
      *
      * @param string or Statement object $sql
      * @param optional array             $valsarr Value-parameters to fill placeholders (if any) in @sql
-     * @param optional boolean           $emptyset whether to return a EmptyResultSet or related object
      *  when a SELECT retrieves nothing or other command fails, default false
      *
      * @return <namespace>ResultSet or a subclass of that
      */
-    abstract public function execute($sql, $valsarr = null, $emptyset = false);
+    abstract public function execute($sql, $valsarr = null);
 
     /**
      * Execute an SQL command, to retrieve (at most) @nrows records.
@@ -332,12 +331,11 @@ abstract class Connection
      * @param optional int     $nrows   The number of rows to return, default all (0)
      * @param optional int     $offset  0-based starting-offset of rows to return, default 0
      * @param optional array   $valsarr Value-parameters to fill placeholders (if any) in @sql
-     * @param optional boolean $emptyset whether to return a EmptyResultSet or related object
      *  when a SELECT retrieves nothing or other command fails, default false
      *
      * @return mixed <namespace>ResultSet or a subclass
      */
-    public function selectLimit($sql, $nrows = 0, $offset = 0, $valsarr = null, $emptyset = false)
+    public function selectLimit($sql, $nrows = 0, $offset = 0, $valsarr = null)
     {
         if ($nrows > 0) {
             $xql = ' LIMIT '.$nrows;
@@ -351,7 +349,7 @@ abstract class Connection
             $sql .= $xql;
         }
 
-        return $this->execute($sql, $valsarr, $emptyset);
+        return $this->execute($sql, $valsarr);
     }
 
     /**
