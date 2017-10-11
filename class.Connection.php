@@ -360,7 +360,7 @@ abstract class Connection
      * @param optional int   $nrows   The number of rows to return, default all (0)
      * @param optional int   $offset  0-based starting-offset of rows to return, default 0
      *
-     * @return numeric-keyed array of matched results, or empty
+     * @return array Numeric-keyed matched results, or empty
      */
     public function getArray($sql, $valsarr = null, $nrows = 0, $offset = 0)
     {
@@ -818,27 +818,6 @@ abstract class Connection
         if ($this->_debug) {
             \CmsApp::get_instance()->add_error(debug_display($error_msg, '', false, true));
         }
-    }
-
-    /**
-     * Error handler
-     *
-     * @internal
-     *
-     * @param string $errtype       The type of error
-     * @param int    $error_number  The error number
-     * @param string $error_message The error message
-     *
-     * @return __NAMESPACE_\EmptyResultSet object with error-indicators set
-     */
-    public function ErrorSet($errtype, $num, $msg)
-    {
-        $this->OnError($errtype, $num, $msg);
-        $rs = new \CMSMS\Database\EmptyResultSet();
-        $rs->errno = $num;
-        $rs->error = $msg;
-
-        return $rs;
     }
 
     //// initialization

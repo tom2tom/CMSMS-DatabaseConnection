@@ -48,10 +48,6 @@ namespace CMSMS\Database\mysqli;
 class Statement
 {
     /**
-     * @errset EmptyResultSet object with error-properties set, or null
-     */
-    public $errset = null;
-    /**
      * @ignore
      */
     protected $_conn; // Connection object
@@ -127,7 +123,6 @@ class Statement
     protected function processerror ($type, $errno, $error)
     {
         $this->_conn->OnError($type, $errno, $error);
-        $this->errset = null;
     }
 
     /**
@@ -166,7 +161,6 @@ class Statement
         if ($this->_prep) {
             $this->_conn->errno = 0;
             $this->_conn->error = '';
-            $this->errset = null;
 
             return true;
         }
@@ -249,7 +243,6 @@ class Statement
         if (call_user_func_array([$this->_stmt, 'bind_param'], $bound)) {
             $this->_conn->errno = 0;
             $this->_conn->error = '';
-            $this->errset = null;
             $this->_bound = true;
 
             return true;
