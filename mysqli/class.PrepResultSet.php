@@ -59,6 +59,7 @@ class PrepResultSet extends \CMSMS\Database\ResultSet
             $this->_pos = ($this->_nrows > 0) ? 0 : -1;
         } else {
             $this->_nrows = PHP_INT_MAX;
+            $this->_pos = -1;
         }
 
         if ($this->_nrows > 0) {
@@ -85,6 +86,11 @@ class PrepResultSet extends \CMSMS\Database\ResultSet
         $this->_row = [];
         $this->_pos = -1;
     }
+
+    public function __destruct()
+    {
+		$this->_stmt->free_result();
+	}
 
     public function fields($key = null)
     {
@@ -202,11 +208,11 @@ class PrepResultSet extends \CMSMS\Database\ResultSet
                     if ($short) {
                         $results[$key] = next($this->_row);
                     } else {
-                        unset($this->_row[$first]);
                         //dereference the values
                         $row = [];
-                        foreach ($this->_row as $k=>$val) {
-                           $row[$k] = $val;
+						while (($val = next($this->_row)) !== false) {
+                            $k = key($this->_row);
+                            $row[$k] = $val;
                         }
                         $results[$key] = $row;
                     }
