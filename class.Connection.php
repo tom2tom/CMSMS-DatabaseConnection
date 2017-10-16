@@ -630,7 +630,7 @@ abstract class Connection
         }
 
         if ($time > 0) {
-            return date('Y-m-d H:i:s', $time);
+            return $this->qStr(date('Y-m-d H:i:s', $time));
         }
         return 'NULL';
     }
@@ -649,11 +649,21 @@ abstract class Connection
     }
 
     /**
+     * An alias for the unixTimestamp method.
+     *
+     * @return int
+     */
+    public function Time()
+    {
+        return $this->unixTimeStamp();
+    }
+
+    /**
      * Convert a date into something that is suitable for writing to a database.
      *
      * @param mixed $date A string date, or an integer timestamp, or a DateTime object
      *
-     * @return quoted, locale-formatted string representing server/local date, o 'NULL'
+     * @return quoted, locale-formatted string representing server/local date, or 'NULL'
      */
     public function dbDate($date)
     {
@@ -673,7 +683,7 @@ abstract class Connection
         }
 
         if ($date > 0) {
-             return strftime('%x', $date);
+             return $this->qStr(strftime('%x', $date));
         }
         return 'NULL';
     }
@@ -688,16 +698,6 @@ abstract class Connection
     public function unixDate()
     {
         return strtotime('today midnight');
-    }
-
-    /**
-     * An alias for the unixTimestamp method.
-     *
-     * @return int
-     */
-    public function Time()
-    {
-        return $this->unixTimeStamp();
     }
 
     /**
