@@ -21,6 +21,17 @@ The changes here are:
 * getRow(), getOne() methods support optional extra argument $offset
 * reinstated ADOdb addQ() method
 * several redundant/deprecated/unusable/unwanted methods omitted e.g. bulk binding is gone (per ADOdb 5.11+)
+   $stmt = $db->Prepare('SOME SQL');
+   OLD CODE
+   $stmt->Bind($array_of_params_for_SQL);
+   while (!$stmt->EOF()) {
+     $stmt->Execute();
+     $stmt->MoveNext();
+   }
+   REPLACEMENT
+   foreach ($array_of_params_for_SQL as $row) {
+     $stmt->Execute($row);
+   }
 ### Deprecations
 Method _NewDatadictionary($db)_ is merely an alias for _$db->NewDatadictionary()_
 ### Installation
