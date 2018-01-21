@@ -59,11 +59,65 @@ namespace CMSMS\Database {
         }
 
         /**
-         * A static no-op function  that allows the autoloader to load this file.
+         * No-op function that allows the autoloader to load this file.
          */
         public static function noop()
         {
             // do nothing
+        }
+
+        /**
+         * For parameterized SQL commands which cannot be natively prepared.
+         * Interpret '?'-parameterized $sql and corresponding $paramvals
+         * into a non-parameterized command, i.e. emulate parameterization.
+		 *
+         * @param object $conn the database-connection object
+         * @param string $sql the command
+         * @param mixed $paramvals array of parameter value[s], or a single scalar value
+         * @return mixed replacment command or null
+         *
+		 * @since 2.3
+         */
+        public static function interpret(Connection &$conn, $sql, $paramvals)
+        {
+            if ($paramvals) {
+                if (!is_array($paramvals)) {
+                    $paramvals = [$paramvals];
+                }
+
+                $sqlarr = explode('?', $sql);
+                $i = 0;
+                $sql = '';
+                foreach ($paramvals as $v) {
+                    $sql .= $sqlarr[$i];
+                    switch (gettype($v)) {
+                        case 'string':
+                            $sql .= $conn->qstr($v);
+                            break;
+                        case 'boolean':
+                            $sql .= $v ? '1' : '0';
+                            break;
+                        case 'integer':
+                            $sql .= $v;
+                            break;
+                        case 'double': //a.k.a. float
+                            $sql .= strtr($v, ',', '.');
+                            break;
+                        default:
+                            if ($v === null) {
+                                $sql .= 'NULL';
+                            } else {
+                                return null;
+                            }
+                    }
+                    ++$i;
+                }
+                if (sizeof($sqlarr) != $i+1) {
+                    return null;
+                }
+                $sql .= $sqlarr[$i];
+            }
+            return $sql;
         }
     }
 } // end of namespace
