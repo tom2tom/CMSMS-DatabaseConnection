@@ -241,6 +241,42 @@ class Connection extends \CMSMS\Database\Connection
         return $this->do_sql($sql);
     }
 
+    public function async_execute($sql, $valsarr = null)
+    {
+/* TODO
+        if ($this->isNative()) {
+		} else {
+			$errno = ?;
+			$error = '';
+		}
+		$this->processerror(parent::ERROR_CONNECT, $errno, $error);
+*/
+        return null;
+    }
+
+    public function reap()
+	{
+/* TODO
+        if ($this->isNative()) {
+            $rs = $this->_mysql->reap_async_query();
+			if ($rs) {
+		        $this->_conn->errno = 0;
+		        $this->_conn->error = '';
+
+		        return new ResultSet($rs);
+			} else {
+				$errno = ?;
+				$error = '';
+			}
+		} else {
+			$errno = ?;
+			$error = '';
+		}
+		$this->processerror(parent::ERROR_CONNECT, $errno, $error);
+*/
+		return null;
+	}
+
     public function beginTrans()
     {
         if (!$this->_in_smart_transaction) {
