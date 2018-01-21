@@ -325,6 +325,16 @@ abstract class Connection
     abstract public function execute($sql, $valsarr = null);
 
     /**
+     * As for execute, but non-blocking. Works only if native driver is present.
+	 */
+    abstract public function async_execute($sql, $valsarr = null);
+
+    /**
+     * Get result from async SQL query. Works only if native driver is present.
+	 */
+    abstract public function reap();
+
+    /**
      * Execute an SQL command, to retrieve (at most) @nrows records.
      *
      * @param string           $sql     The SQL to execute
