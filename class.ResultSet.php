@@ -56,11 +56,6 @@ abstract class ResultSet
     /**
      * @ignore
      */
-    protected $_native = ''; //for PHP 5.4+, the MySQL native driver is a php.net compile-time default
-
-    /**
-     * @ignore
-     */
     public function __set($key, $val)
     {
         switch ($key) {
@@ -238,16 +233,4 @@ abstract class ResultSet
      * @internal
      */
     abstract protected function fetch_row();
-
-    /**
-     * @internal
-     */
-    protected function isNative()
-    {
-        if ($this->_native === '') {
-            $this->_native = function_exists('mysqli_fetch_all');
-        }
-
-        return $this->_native;
-    }
 }
