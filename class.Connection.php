@@ -325,12 +325,14 @@ abstract class Connection
     abstract public function execute($sql, $valsarr = null);
 
     /**
-     * As for execute, but non-blocking. Works only if native driver is present.
+     * As for execute, but non-blocking. Works as such only if the native driver
+	 * is present. Otherwise reverts to normal execution, and caches the result.
 	 */
     abstract public function async_execute($sql, $valsarr = null);
 
     /**
-     * Get result from async SQL query. Works only if native driver is present.
+     * Get result from async SQL query. If the native driver is not present, this
+	 * just returns the cached result of the prior not-really-async command.
 	 */
     abstract public function reap();
 
