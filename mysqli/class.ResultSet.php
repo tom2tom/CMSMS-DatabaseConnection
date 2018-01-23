@@ -40,6 +40,7 @@ class ResultSet extends \CMSMS\Database\ResultSet
     private $_row = [];
     private $_nrows = 0;
     private $_pos = -1;
+    private $_native = ''; //for PHP 5.4+, the MySQL native driver is a php.net compile-time default
 
     /**
      * @param $result mysqli_result object (for queries which return data), or boolean
@@ -63,6 +64,15 @@ class ResultSet extends \CMSMS\Database\ResultSet
         if (is_object($this->_result)) {
             $this->_result->free();
         }
+    }
+
+    protected function isNative()
+    {
+        if ($this->_native === '') {
+            $this->_native = function_exists('mysqli_fetch_all');
+        }
+
+        return $this->_native;
     }
 
     public function fields($key = null)
