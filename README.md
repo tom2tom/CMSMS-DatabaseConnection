@@ -25,7 +25,7 @@ The changes here are:
 * method _NewDatadictionary($db)_ is merely an alias for _$db->NewDatadictionary()_
 * some parameterized commands
     * [MySQL](https://dev.mysql.com/doc/refman/5.7/en/sql-syntax-prepared-statements.html#idm139681852857552) and [MariaDB](https://mariadb.com/kb/en/library/prepare-statement) document their respective SQL commands which can be parameterized. They're not entirely consistent. There's no reasonably possible way to get an 'inverse' of those lists, even if we did accept the overhead of checking each command.  [DML queries](https://dev.mysql.com/doc/refman/5.7/en/sql-syntax-data-manipulation.html) are ok.
-    * Unsupported commands should be manually migrated to non-parameterised ASAP. A couple of known-to-fail examples seen in CMSMS code are SHOW TABLES LIKE ? and ... LIMIT ?.
+    * Unsupported commands should be manually migrated to non-parameterised form ASAP. Known-to-fail examples seen in core CMSMS code are SHOW TABLES LIKE ? and ... LIMIT ?.
 * bulk binding (per ADOdb 5.11+)
 ```php
 $stmt = $db->prepare('SOME SQL');
