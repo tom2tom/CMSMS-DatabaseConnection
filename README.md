@@ -28,7 +28,7 @@ The changes here are:
     * Unsupported commands should be manually migrated to non-parameterised ASAP. A couple of known-to-fail examples seen in CMSMS code are SHOW TABLES LIKE ? and ... LIMIT ?.
 * bulk binding (per ADOdb 5.11+)
 ```php
-$stmt = $db->prepare('SOME SQL');```
+$stmt = $db->prepare('SOME SQL');
 ```
  OLD
 ```php 
@@ -41,7 +41,7 @@ while (!$stmt->EOF()) {
   NEW
 ```php
 foreach ($array_of_params_for_SQL as $row) {
- $stmt->execute($row);
+  $stmt->execute($row);
 }
 ```
 ### Installation
