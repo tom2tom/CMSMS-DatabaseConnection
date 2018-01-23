@@ -40,6 +40,8 @@ class Connection extends \CMSMS\Database\Connection
     protected $_in_transaction = 0;
     protected $_in_smart_transaction = 0;
     protected $_transaction_status = true;
+    protected $_native = ''; //for PHP 5.4+, the MySQL native driver is a php.net compile-time default
+	private $_asyncQ = []; // queue of cached results from prior pretend-async commands, pending pretend-reaps
 
     public function __construct()
     {
@@ -84,6 +86,15 @@ class Connection extends \CMSMS\Database\Connection
             $this->on_error(parent::ERROR_CONNECT, 98,
                 'Configuration error: mysqli class is not available');
         }
+    }
+
+    public function isNative()
+    {
+        if ($this->_native === '') {
+            $this->_native = function_exists('mysqli_fetch_all');
+        }
+
+        return $this->_native;
     }
 
     public function close()
@@ -243,38 +254,37 @@ class Connection extends \CMSMS\Database\Connection
 
     public function async_execute($sql, $valsarr = null)
     {
-/* TODO
         if ($this->isNative()) {
+//TODO
 		} else {
-			$errno = ?;
-			$error = '';
+			$rs = $this->execute($sql, $valsarr);
+			if ($rs) {
+				$this->_asyncQ[] = $rs;
+			} else {
+//TODO arrange to handle error when 'reaped'
+			}
 		}
-		$this->processerror(parent::ERROR_CONNECT, $errno, $error);
-*/
-        return null;
     }
 
     public function reap()
 	{
-/* TODO
         if ($this->isNative()) {
             $rs = $this->_mysql->reap_async_query();
-			if ($rs) {
-		        $this->_conn->errno = 0;
-		        $this->_conn->error = '';
-
-		        return new ResultSet($rs);
-			} else {
-				$errno = ?;
-				$error = '';
-			}
 		} else {
-			$errno = ?;
-			$error = '';
+			$rs = array_shift($this->_asyncQ);
 		}
-		$this->processerror(parent::ERROR_CONNECT, $errno, $error);
-*/
-		return null;
+		if ($rs) { // && $rs is not some error-data
+			$this->_conn->errno = 0;
+			$this->_conn->error = '';
+
+			return new ResultSet($rs);
+		} else {
+			$errno = 98;
+			$error = 'No async result available';
+			$this->processerror(parent::ERROR_EXECUTE, $errno, $error);
+
+			return null;
+		}
 	}
 
     public function beginTrans()
