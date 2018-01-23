@@ -68,31 +68,31 @@ namespace CMSMS\Database {
 
         /**
          * For parameterized SQL commands which cannot be natively prepared.
-         * Interpret '?'-parameterized $sql and corresponding $paramvals
+         * Interpret '?'-parameterized $sql and corresponding $valsarr
          * into a non-parameterized command, i.e. emulate parameterization.
 		 *
          * @param object $conn the database-connection object
          * @param string $sql the command
-         * @param mixed $paramvals array of parameter value[s], or a single scalar value
+         * @param mixed  $valsarr array of command-parameter value[s], or a single scalar value
          * @return mixed replacment command or null
          *
 		 * @since 2.3
          */
-        public static function interpret(Connection &$conn, $sql, $paramvals)
+        public static function interpret(Connection &$conn, $sql, $valsarr)
         {
-            if ($paramvals) {
-                if (!is_array($paramvals)) {
-                    $paramvals = [$paramvals];
+            if ($valsarr) {
+                if (!is_array($valsarr)) {
+                    $valsarr = [$valsarr];
                 }
 
                 $sqlarr = explode('?', $sql);
                 $i = 0;
                 $sql = '';
-                foreach ($paramvals as $v) {
+                foreach ($valsarr as $v) {
                     $sql .= $sqlarr[$i];
                     switch (gettype($v)) {
                         case 'string':
-                            $sql .= $conn->qstr($v);
+                            $sql .= $conn->qstr($v); //or after FILTER_SANITIZE_* filtering ?
                             break;
                         case 'boolean':
                             $sql .= $v ? '1' : '0';
