@@ -30,7 +30,7 @@ namespace CMSMS\Database\mysqli;
  */
 class Statement
 {
-	const NOPARMCMD = 1295; // MySQL/MariaDB errno for deprecated non-parameterizable command
+    const NOPARMCMD = 1295; // MySQL/MariaDB errno for deprecated non-parameterizable command
     /**
      * @ignore
      */
@@ -137,12 +137,12 @@ class Statement
 
         $errno = $this->_stmt->errno;
         if ($errno == self::NOPARMCMD) {
-			//the SQL cannot be parameterized
+            //the SQL cannot be parameterized
             debug_to_log('SQL: '.$sql);
             debug_bt_to_log();
             //deprecated - setup to try to emulate the command, later
             //$this->_stmt persists (non-null)
-			$this->_prep = true;
+            $this->_prep = true;
             $this->_conn->errno = $errno;
             $this->_conn->error = '';
 
@@ -218,7 +218,7 @@ class Statement
         }
 
         //deprecated - attempt emulation
-		if ($this->_conn->errno == self::NOPARMCMD) {
+        if ($this->_conn->errno == self::NOPARMCMD) {
             $sql = \CMSMS\Database\compatibility::interpret($this->_conn, $this->sql, $valsarr);
             if ($sql) {
                 $this->_sql = $sql;
@@ -329,29 +329,29 @@ class Statement
                     return null;
                 }
             } else {
-				//TODO this is in wrong spot : maybe not yet bound
-				//check for deprecated emulation of non-parameterizable command
-				if ($this->_conn->errno == self::NOPARMCMD) {
-			        $sql = \CMSMS\Database\compatibility::interpret($this->_conn, $this->sql, $valsarr);
-			        if ($sql) {
-			            $this->_sql = $sql;
-					}
+                //TODO this is in wrong spot : maybe not yet bound
+                //check for deprecated emulation of non-parameterizable command
+                if ($this->_conn->errno == self::NOPARMCMD) {
+                    $sql = \CMSMS\Database\compatibility::interpret($this->_conn, $this->sql, $valsarr);
+                    if ($sql) {
+                        $this->_sql = $sql;
+                    }
 
-					$this->_stmt = null;
-					$rs = $this->_conn->execute($this->_sql); //mysqli_result or false
-					if ($rs) {
-					    $this->_conn->errno = 0;
-					    $this->_conn->error = '';
+                    $this->_stmt = null;
+                    $rs = $this->_conn->execute($this->_sql); //mysqli_result or false
+                    if ($rs) {
+                        $this->_conn->errno = 0;
+                        $this->_conn->error = '';
 
-					    return new ResultSet($rs);
-					} else {
-					    $errno = 6;
-					    $error = 'Unbindable SQL - '.$this->_sql;
-					    $this->processerror(\CMSMS\Database\Connection::ERROR_PARAM, $errno, $error);
+                        return new ResultSet($rs);
+                    } else {
+                        $errno = 6;
+                        $error = 'Unbindable SQL - '.$this->_sql;
+                        $this->processerror(\CMSMS\Database\Connection::ERROR_PARAM, $errno, $error);
 
-					    return null;
-					}
-				}
+                        return null;
+                    }
+                }
 
                 $errno = 2;
                 $error = 'Incorrect number of bound parameters - should be '.$pc;
