@@ -34,7 +34,7 @@ namespace CMSMS\Database;
  * </ul>
  *
  * @author Robert Campbell
- * @copyright Copyright (C) 2017 Robert Campbell <calguy1000@cmsmadesimple.org>
+ * @copyright (C) 2017-2018 Robert Campbell <calguy1000@cmsmadesimple.org>
  *
  * @since 2.2
  */
@@ -79,6 +79,12 @@ abstract class Connection
      * @param string $error The error descriptor from the last operation
      */
     public $error = '';
+
+    /**
+     * @ignore
+     * callable Error-processing method
+     */
+    protected $_errorhandler = null;
 
     /**
      * @ignore
@@ -128,15 +134,19 @@ abstract class Connection
 
     /**
      * Construct a new Connection.
-     *
+     * @param array $config unused here, for subclass only
      */
-    public function __construct()
+    public function __construct($config = null)
     {
         $this->_debug = defined('CMS_DEBUG') && CMS_DEBUG != 0;
         if ($this->_debug) {
             $this->_debug_cb = 'debug_buffer';
         }
-        $this->_errorhandler = [$this, 'on_error'];
+
+        global $CMS_INSTALL_PAGE;
+        if (!isset($CMS_INSTALL_PAGE)) {
+            $this->_errorhandler = [$this, 'on_error'];
+        }
     }
 
     /**
@@ -312,14 +322,14 @@ abstract class Connection
 
     /**
      * As for execute, but non-blocking. Works as such only if the native driver
-	 * is present. Otherwise reverts to normal execution, and caches the result.
-	 */
+     * is present. Otherwise reverts to normal execution, and caches the result.
+     */
     abstract public function async_execute($sql, $valsarr = null);
 
     /**
      * Get result from async SQL query. If the native driver is not present, this
-	 * just returns the cached result of the prior not-really-async command.
-	 */
+     * just returns the cached result of the prior not-really-async command.
+     */
     abstract public function reap();
 
     /**
@@ -784,7 +794,6 @@ abstract class Connection
     /**
      * A callback that is called when a database error occurs.
      * This method will by default call the error handler if it has been set.
-     * If no error handler is set, an exception will be thrown.
      *
      * @param string $errtype       The type of error
      * @param int    $error_number  The error number
@@ -800,7 +809,7 @@ abstract class Connection
     }
 
     /**
-     * Default error handler
+     * Default error handler (except during site-installation)
      *
      * @internal
      *
@@ -808,13 +817,12 @@ abstract class Connection
      * @param int    $error_number  The error number
      * @param string $error_message The error message
      */
-
     protected function on_error($errtype, $error_number, $error_msg)
     {
-        debug_to_log("Database error: $errtype($error_number) - $error_msg");
-        debug_bt_to_log();
+        \debug_to_log("Database error: $errtype($error_number) - $error_msg");
+        \debug_bt_to_log();
         if ($this->_debug) {
-            \CmsApp::get_instance()->add_error(debug_display($error_msg, '', false, true));
+            \CmsApp::get_instance()->add_error(\debug_display($error_msg, '', false, true));
         }
     }
 
@@ -823,7 +831,7 @@ abstract class Connection
     /**
      * Create a new database connection object.
      *
-     * @deprecated - use new <namespace>\Connection()
+     * @deprecated Does nothing - use new <namespace>\mysqli\Connection()
      *
      */
     public static function Initialize()
