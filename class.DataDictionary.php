@@ -2,8 +2,7 @@
 /*
 Class DataDictionary: methods of interacting with database tables
 Copyright (C) 2017-2018 Robert Campbell <calguy1000@cmsmadesimple.org>
-For CMS Made Simple <http:www.cmsmadesimple.org>
-Copyright (C) 2004-2018 Ted Kulp <ted@cmsmadesimple.org>
+This file is a component of CMS Made Simple <http://www.cmsmadesimple.org>
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -338,7 +337,7 @@ abstract class DataDictionary
      * @internal
      *
      * @param string $name          The input name
-     * @param bool   $allowBrackets wether brackets should be quoted or not
+     * @param bool   $allowBrackets whether brackets should be quoted or not
      *
      * @return string
      */
@@ -476,7 +475,7 @@ abstract class DataDictionary
      *
      * @return string[] An array of strings suitable for use with the ExecuteSQLArray method
      *
-     * @see CreateTableSQL
+     * @see DataDictionary::CreateTableSQL()
      */
     public function AddColumnSQL($tabname, $flds)
     {
@@ -496,8 +495,8 @@ abstract class DataDictionary
      *
      * @param string       $tabname      table-name
      * @param string       $flds         column-name and type for the changed column
-     * @param string       $tableflds    complete defintion of the new table, eg. for postgres, default ''
-     * @param array/string $tableoptions options for the new table see CreateTableSQL, default ''
+     * @param string       $tableflds    optional complete definition of the new table
+     * @param array/string $tableoptions optional options for the new table see CreateTableSQL, default ''
      *
      * @return string[] An array of strings suitable for use with the ExecuteSQLArray method
      */
@@ -520,7 +519,7 @@ abstract class DataDictionary
      * @param string $tabname   table-name
      * @param string $oldcolumn column-name to be renamed
      * @param string $newcolumn new column-name
-     * @param string $flds      complete column-defintion-string like for AddColumnSQL, only used by mysql atm., default=''
+     * @param string $flds      optional complete column-definition-string like for AddColumnSQL, only used by mysql atm., default=''
      *
      * @return string[] An array of strings suitable for use with the ExecuteSQLArray method
      */
@@ -541,8 +540,8 @@ abstract class DataDictionary
      *
      * @param string       $tabname      table-name
      * @param string       $flds         column-name and type for the changed column
-     * @param string       $tableflds    complete defintion of the new table, eg. for postgres, default ''
-     * @param array/string $tableoptions options for the new table see CreateTableSQL, default ''
+     * @param string       $tableflds    optional complete definition of the new table
+     * @param array/string $tableoptions optional options for the new table see CreateTableSQL, default ''
      *
      * @return string[] An array of strings suitable for use with the ExecuteSQLArray method
      */
@@ -594,17 +593,23 @@ abstract class DataDictionary
      *
      * The type fields are codes that map to real database types as follows:
      * <dl>
-     *  <dt>C</dt>
+     *  <dt>C or C2</dt>
      *  <dd>Varchar, capped to 255 characters.</dd>
-     *  <dt>X</dt>
+     *  <dt>X or X2</dt>
      *  <dd>Text</dd>
-     *  <dt>XL</dt>
-     *  <dd>LongText</dd>
-     *  <dt>C2</dt>
-     *  <dd>Varchar, capped to 255 characters</dd>
-     *  <dt>XL</dt>
+     *  <dt>X(bytesize)</dt>
+     *  <dd>Text or MediumText or LongText sufficient for bytesize</dd>
+     *  <dt>XM or MX</dt>
+     *  <dd>MediumText</dd>
+     *  <dt>XL or LX</dt>
      *  <dd>LongText</dd>
      *  <dt>B</dt>
+     *  <dd>Blob</dd>
+     *  <dt>B(bytesize)</dt>
+     *  <dd>Blob or MediumBlob or LongBlob sufficient for bytesize</dd>
+     *  <dt>BM or MB</dt>
+     *  <dd>MediumBlob</dd>
+     *  <dt>BL or LB</dt>
      *  <dd>LongBlob</dd>
      *  <dt>D</dt>
      *  <dd>Date</dd>
@@ -638,7 +643,7 @@ abstract class DataDictionary
      *  <dd>Same as AUTO</dd>
      *  <dt>KEY</dt>
      *  <dd>Primary key field.  Also sets NOTNULL. Compound keys are supported.</dd>
-     *  <dt>PRImARY</dt>
+     *  <dt>PRIMARY</dt>
      *  <dd>Same as KEY</dd>
      *  <dt>DEFAULT</dt>
      *  <dd>The default value.  Character strings are auto-quoted unless the string begins with a space.  i.e: ' SYSDATE '.</dd>
@@ -646,11 +651,15 @@ abstract class DataDictionary
      *  <dd>Same as DEFAULT</dd>
      *  <dt>CONSTRAINTS</dt>
      *  <dd>Additional constraints defined at the end of the field definition.</dd>
+     *  <dt>INDEX</dt>
+     *  <dd>Create an index on this field. Index-type may be specified as INDEX(type). MySQL types are UNIQUE etc</dd>
+     *  <dt>FOREIGN</dt>
+     *  <dd>Create a foreign key on this field. Specify reference-table parameters as FOREIGN(tblname,tblfield).</dd>
      *</dl>
      *
-     * @param string $tabname      The table name
-     * @param string $flds         A comma-separated list of field definitions using datadictionary syntax
-     * @param mixed  $tableoptions A string specifying table options (database driver specific) for the table creation command.  Or an associative array of table options, keys being the database type (as available)
+     * @param string $tabname      table name
+     * @param string $flds         comma-separated list of field definitions using datadictionary syntax
+     * @param mixed  $tableoptions optional table options (database driver specific) for the table creation command.  Or an associative array of table options, keys being the database type (as available)
      *
      * @return string[] An array of strings suitable for use with the ExecuteSQLArray method
      */
@@ -674,7 +683,7 @@ abstract class DataDictionary
     }
 
     /**
-     * Part of the process of parsing the datadictionary format into database specific commands.
+     * Part of the process of parsing the datadictionary format into MySQL commands.
      *
      * @internal
      */
@@ -710,6 +719,7 @@ abstract class DataDictionary
                 $flds[] = $f1;
             }
         }
+
         $this->autoIncrement = false;
         $lines = [];
         $pkey = [];
@@ -728,9 +738,11 @@ abstract class DataDictionary
             $fconstraint = false;
             $fnotnull = false;
             $funsigned = false;
+            $findex = false;
+            $fforeign = false;
 
             //-----------------
-            // Parse attributes
+            // PARSE ATTRIBUTES
             foreach ($fld as $attr => $v) {
                 if ($attr == 2 && is_numeric($v)) {
                     $attr = 'SIZE';
@@ -748,22 +760,22 @@ abstract class DataDictionary
                         $ftype = $this->ActualType(strtoupper($v));
                         break;
                     case 'SIZE':
-                        $dotat = strpos($v, '.');
-                        if ($dotat === false) {
-                            $dotat = strpos($v, ',');
+                        $at = strpos($v, '.');
+                        if ($at === false) {
+                            $at = strpos($v, ',');
                         }
-                        if ($dotat === false) {
+                        if ($at === false) {
                             $fsize = $v;
                         } else {
-                            $fsize = substr($v, 0, $dotat);
-                            $fprec = substr($v, $dotat + 1);
+                            $fsize = substr($v, 0, $at);
+                            $fprec = substr($v, $at + 1);
                         }
                         break;
                     case 'UNSIGNED':
                         $funsigned = true;
                         break;
-                    case 'AUTOINCREMENT':
                     case 'AUTO':
+                    case 'AUTOINCREMENT':
                         $fautoinc = true;
                         $fnotnull = true;
                         break;
@@ -791,6 +803,14 @@ abstract class DataDictionary
                     case 'CONSTRAINT':
                         $fconstraint = $v;
                         break;
+                    case 'INDEX':
+                    case 'UNIQUE':
+                    case 'FULLTEXT':
+                        $findex = $attr;  //last-used prevails
+                        break;
+                    case 'FOREIGN':
+                        $fforeign = $v;
+                        break;
                 }
             }
 
@@ -806,19 +826,22 @@ abstract class DataDictionary
                 return false;
             }
 
-            $ftype = strtoupper($ftype);
-            $ftype = $this->_GetSize($ftype, $ty, $fsize, $fprec);
+            $ftype = $this->_GetSize(strtoupper($ftype), $ty, $fsize, $fprec);
 
             switch ($ty) {
                 case 'X':
                 case 'X2':
                 case 'B':
+                case 'LX':
+                case 'XL':
+                case 'MX':
+                case 'XM':
+                case 'LB':
+                case 'BL':
+                case 'MB':
+                case 'BM':
                     $fdefault = false; //TEXT and BLOB fields cannot have a DEFAULT value
                     $fnotnull = false;
-                    if (!$fsize) {
-                        $ftype = 'LONG'.$ftype;
-                    }
-                    break;
             }
 
             $fid = strtoupper(preg_replace('/^`(.+)`$/', '$1', $fname));
@@ -847,10 +870,24 @@ abstract class DataDictionary
             }
             $suffix = $this->_CreateSuffix($fname, $ftype, $fnotnull, $fdefault, $fautoinc, $fconstraint, $funsigned);
 
-            if ($widespacing) {
-                $fname = str_pad($fname, 24);
+            $s = ($widespacing) ? str_pad($fname, 24) : $fname;
+            $s .= ' '.$ftype.$suffix;
+
+            if ($findex) {
+                $s .= ", $findex idx_{$fname}($fname)";
             }
-            $lines[$fid] = $fname.' '.$ftype.$suffix;
+
+            if ($fforeign) {
+                $at = array_search($fforeign, $fld);
+                if ($at !== false && isset($fld[++$at])) {
+                    list($table, $field) = explode(',', trim($fld[$at]), 2);
+                    if ($table && $field) {
+                        $s .= ", FOREIGN KEY($fname) REFERENCES $table($field)";
+                    }
+                }
+            }
+
+            $lines[$fid] = $s;
 
             if ($fautoinc) {
                 $this->autoIncrement = true;
@@ -868,12 +905,23 @@ abstract class DataDictionary
      */
     protected function _GetSize($ftype, $ty, $fsize, $fprec)
     {
-        if (strlen($fsize) && strpos($ftype, '(') === false) {
-            $ftype .= '('.$fsize;
-            if (strlen($fprec)) {
-                $ftype .= ','.$fprec;
+        if ($fsize) {
+            if ($ty == 'B' || $ty == 'X') {
+                if ($fsize <= 2**16) {
+                    $s = '';
+                } elseif ($fsize <= 2**24) {
+                    $s = 'MEDIUM';
+                } else {
+                    $s = 'LONG';
+                }
+                $ftype = $s.$ftype;
+            } elseif (strpos($ftype, '(') === false) {
+                $ftype .= '('.$fsize;
+                if (strlen($fprec)) {
+                    $ftype .= ','.$fprec;
+                }
+                $ftype .= ')';
             }
-            $ftype .= ')';
         }
 
         return $ftype;
@@ -1003,7 +1051,7 @@ abstract class DataDictionary
         $s .= "\n)";
         $str = $this->get_dbtype_options($tableoptions);
         if ($str) {
-            $s .= $str;
+            $s .= ' '.$str;
         }
         $sql[] = $s;
 
