@@ -528,8 +528,10 @@ abstract class DataDictionary
         $tabname = $this->TableName($tabname);
         if ($flds) {
             list($lines, $pkey) = $this->_GenFields($flds);
-            list(, $first) = each($lines);
-            list(, $column_def) = split("[\t ]+", $first, 2);
+            $first = reset($lines);
+            list(, $column_def) = preg_split('/\s+/', $first, 2);
+        } else {
+            $column_def = '';
         }
 
         return array(sprintf($this->renameColumn, $tabname, $this->NameQuote($oldcolumn), $this->NameQuote($newcolumn), $column_def));
@@ -907,14 +909,14 @@ abstract class DataDictionary
     {
         if ($fsize) {
             if ($ty == 'B' || $ty == 'X') {
-                if ($fsize <= 2**16) {
-                    $s = '';
-                } elseif ($fsize <= 2**24) {
-                    $s = 'MEDIUM';
+                if ($fsize <= 256) {
+                    if (--$fsize < 1) $fsize = 1;
+                    $ftype = 'C('.$fsize.')';
+                } elseif ($fsize > 2**16 && $fsize <= 2**24) {
+                    $ftype = 'MEDIUM'.$ftype;
                 } else {
-                    $s = 'LONG';
+                    $ftype = 'LONG'.$ftype;
                 }
-                $ftype = $s.$ftype;
             } elseif (strpos($ftype, '(') === false) {
                 $ftype .= '('.$fsize;
                 if (strlen($fprec)) {
